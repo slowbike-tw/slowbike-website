@@ -10,6 +10,7 @@ import {
   Truck,
 } from "lucide-react";
 import Link from "next/link";
+import { Logo } from "@/components/logo";
 import { BikePlaceholder, CheckList, LinkButton, SectionHeading } from "@/components/ui";
 import {
   bikes,
@@ -65,39 +66,46 @@ export default function Home() {
           <div className="flex flex-col justify-between gap-7 sm:flex-row sm:items-end">
             <SectionHeading
               eyebrow="STANDARD SERIES"
-              title="六種生活，一台剛剛好的車"
+              title="四種生活，一台剛剛好的車"
               description="從每日通勤到週末旅行，依照你的使用情境選擇最合適的車款。"
             />
             <Link href="/bikes" className="inline-flex items-center gap-2 text-sm font-black text-olive-700">
               查看全部車款 <ArrowRight size={17} />
             </Link>
           </div>
-          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-12 grid gap-5 md:grid-cols-2">
             {bikes.map((bike) => (
-              <article key={bike.name} className="overflow-hidden rounded-[1.75rem] border border-black/10 bg-white">
-                <div className={`h-64 bg-gradient-to-br ${bike.tone}`}>
-                  <BikePlaceholder name={bike.name} mark={bike.mark} />
-                </div>
-                <div className="p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <span className="text-[10px] font-black tracking-[0.2em] text-olive-600">{bike.tag}</span>
-                      <h3 className="mt-2 text-2xl font-black tracking-[-0.04em]">{bike.name}</h3>
-                    </div>
-                    <span className="grid size-10 place-items-center rounded-full bg-olive-50 text-olive-700">
-                      <ArrowRight size={18} />
-                    </span>
+              <Link
+                key={bike.name}
+                href={bike.href}
+                className="group overflow-hidden rounded-[1.75rem] border border-black/10 bg-white transition hover:-translate-y-1 hover:shadow-soft"
+                aria-label={`查看 ${bike.name} 商品詳情`}
+              >
+                <article>
+                  <div className={`h-64 bg-gradient-to-br ${bike.tone}`}>
+                    <BikePlaceholder name={bike.name} mark={bike.mark} />
                   </div>
-                  <p className="mt-3 text-sm font-bold text-ink/65">{bike.slogan}</p>
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {bike.uses.map((use) => (
-                      <span key={use} className="rounded-full bg-sand px-3 py-2 text-xs font-bold text-ink/65">
-                        {use}
+                  <div className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <span className="text-[10px] font-black tracking-[0.14em] text-olive-600">{bike.seriesLabel}</span>
+                        <h3 className="mt-2 text-2xl font-black tracking-[-0.04em]">{bike.lifestyle}</h3>
+                      </div>
+                      <span className="grid size-10 place-items-center rounded-full bg-olive-50 text-olive-700 transition group-hover:bg-olive-700 group-hover:text-white">
+                        <ArrowRight size={18} />
                       </span>
-                    ))}
+                    </div>
+                    <p className="mt-3 text-sm font-bold text-ink/65">{bike.slogan}</p>
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      {bike.uses.map((use) => (
+                        <span key={use} className="rounded-full bg-sand px-3 py-2 text-xs font-bold text-ink/65">
+                          {use}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </article>
+                </article>
+              </Link>
             ))}
           </div>
         </div>
@@ -182,7 +190,8 @@ export default function Home() {
           <div>
             <SectionHeading eyebrow="ABOUT US" title="移動，也是一種生活方式" />
             <div className="mt-7 space-y-5 text-base leading-8 text-ink/65">
-              <p>SlowBike 即行，說走就走，及時行樂。</p>
+              <Logo size="brand" />
+              <p>說走就走，及時行樂。</p>
               <p>我們相信，移動不只是從 A 點到 B 點，更是一種生活方式。</p>
               <p>
                 無論是通勤、購物、外送、露營旅行，還是海邊吹風、街頭漫遊，每個人都值得擁有一台適合自己的電動腳踏車。

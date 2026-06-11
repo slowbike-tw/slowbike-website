@@ -1,19 +1,36 @@
+import Image from "next/image";
 import Link from "next/link";
 
-export function Logo({ light = false }: { light?: boolean }) {
+type LogoSize = "header" | "footer" | "brand";
+
+const sizeClasses: Record<LogoSize, string> = {
+  header: "w-[142px] sm:w-[154px]",
+  footer: "w-[210px]",
+  brand: "w-[260px] sm:w-[310px]",
+};
+
+export function Logo({
+  light = false,
+  size = "header",
+}: {
+  light?: boolean;
+  size?: LogoSize;
+}) {
   return (
-    <Link href="/" className="group inline-flex items-center gap-2" aria-label="SlowBike 即行首頁">
-      <span
-        className={`grid size-9 place-items-center rounded-full border text-xs font-black tracking-tighter transition-transform group-hover:-rotate-6 ${
-          light ? "border-white/40 text-white" : "border-ink/30 text-ink"
-        }`}
-      >
-        SB
-      </span>
-      <span className={light ? "text-white" : "text-ink"}>
-        <span className="block text-lg font-black leading-none tracking-[-0.04em]">SlowBike</span>
-        <span className="mt-1 block text-[10px] font-bold tracking-[0.34em] opacity-60">即行</span>
-      </span>
+    <Link
+      href="/"
+      className={`inline-flex shrink-0 items-center ${light ? "rounded-xl bg-white px-3 py-2" : ""}`}
+      aria-label="SlowBike 官方網站首頁"
+    >
+      <Image
+        src="/brand/slowbike-logo.png"
+        alt="SlowBike 官方 Logo"
+        width={1800}
+        height={517}
+        priority={size === "header"}
+        className={`h-auto ${sizeClasses[size]}`}
+        sizes={size === "brand" ? "(max-width: 640px) 260px, 310px" : `${size === "footer" ? 210 : 154}px`}
+      />
     </Link>
   );
 }

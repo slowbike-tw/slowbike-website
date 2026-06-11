@@ -9,7 +9,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-5 py-14 lg:px-8 lg:py-20">
         <div className="grid gap-12 border-b border-white/15 pb-12 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
           <div>
-            <Logo light />
+            <Logo light size="footer" />
             <p className="mt-7 max-w-sm text-2xl font-bold leading-snug">說走就走，及時行樂。</p>
             <p className="mt-3 max-w-sm text-sm leading-7 text-white/55">
               找到適合你的電動腳踏車，讓每一段移動都更自由。
