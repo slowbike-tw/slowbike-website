@@ -6,6 +6,12 @@ const TABLE = "logistics_orders";
 
 type LogisticsOrderRow = {
   id: string;
+  auth_user_id: string | null;
+  customer_order_id: string | null;
+  logistics_source: string;
+  source_order_no: string;
+  customer_phone: string;
+  customer_email: string;
   order_no: string;
   business_type: string;
   customer: LogisticsOrder["customer"];
@@ -31,6 +37,12 @@ type LogisticsOrderRow = {
 function toRow(order: LogisticsOrder): LogisticsOrderRow {
   return {
     id: order.id,
+    auth_user_id: order.authUserId || null,
+    customer_order_id: order.customerOrderId || null,
+    logistics_source: order.logisticsSource ?? "後台人工",
+    source_order_no: order.sourceOrderNo ?? "",
+    customer_phone: order.customer.phone,
+    customer_email: order.customer.email ?? "",
     order_no: order.orderNumber,
     business_type: order.businessType,
     customer: order.customer,
@@ -57,6 +69,11 @@ function toRow(order: LogisticsOrder): LogisticsOrderRow {
 function fromRow(row: LogisticsOrderRow): LogisticsOrder {
   return normalizeLogisticsOrder({
     id: row.id,
+    authUserId: row.auth_user_id ?? undefined,
+    customerOrderId: row.customer_order_id ?? undefined,
+    logisticsSource:
+      (row.logistics_source as LogisticsOrder["logisticsSource"]) ?? "後台人工",
+    sourceOrderNo: row.source_order_no ?? "",
     orderNumber: row.order_no,
     businessType: row.business_type as LogisticsOrder["businessType"],
     customer: row.customer,
@@ -90,6 +107,18 @@ export async function fetchLogisticsOrders() {
   const rows = await supabase.select<LogisticsOrderRow[]>(
     TABLE,
     "select=*&order=created_at.desc",
+  );
+  return rows.map(fromRow);
+}
+
+export async function fetchMemberLogisticsOrders(
+  authUserId: string,
+  accessToken: string,
+) {
+  const rows = await supabase.select<LogisticsOrderRow[]>(
+    TABLE,
+    `select=*&auth_user_id=eq.${encodeURIComponent(authUserId)}&order=created_at.desc`,
+    accessToken,
   );
   return rows.map(fromRow);
 }

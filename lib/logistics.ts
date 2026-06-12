@@ -10,6 +10,16 @@ import type {
   PackageItemType,
 } from "@/types/logistics";
 
+export const logisticsSources = [
+  "官網訂單",
+  "後台人工",
+  "客製車訂單",
+  "代購代運",
+  "同行訂購",
+  "歷史補建",
+  "其他",
+] as const;
+
 export const logisticsStatuses: LogisticsStatus[] = [
   "待出貨",
   "已出貨",

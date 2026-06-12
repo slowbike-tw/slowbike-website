@@ -2,6 +2,12 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.logistics_orders (
   id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid references auth.users(id) on delete set null,
+  customer_order_id uuid,
+  logistics_source text not null default '後台人工',
+  source_order_no text not null default '',
+  customer_phone text not null default '',
+  customer_email text not null default '',
   order_no text not null unique,
   business_type text not null,
   customer jsonb not null default '{}'::jsonb,
@@ -29,6 +35,9 @@ create index if not exists logistics_orders_created_at_idx
 
 create index if not exists logistics_orders_status_idx
   on public.logistics_orders (logistics_status);
+
+create index if not exists logistics_orders_auth_user_id_idx
+  on public.logistics_orders (auth_user_id);
 
 alter table public.logistics_orders enable row level security;
 

@@ -56,7 +56,11 @@ export const products: Product[] = catalog.products
       media: {
         mainImage: mainImage ? imagePath(mainImage.file, mainImage.status) : null,
         gallery: images
-          .filter((image) => image.usage !== "主圖")
+          .filter(
+            (image) =>
+              image.usage !== "主圖" &&
+              !image.usage.startsWith("車色主圖-"),
+          )
           .map((image) => imagePath(image.file, image.status)),
         colorImages: Object.fromEntries(
           colors.map((color) => {

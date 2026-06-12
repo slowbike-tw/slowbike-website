@@ -17,6 +17,10 @@ export function QuickStatusEditor({ order }: { order: LogisticsOrder }) {
   async function save() {
     setSaving(true);
     const input: LogisticsOrderInput = {
+      authUserId: order.authUserId,
+      customerOrderId: order.customerOrderId,
+      logisticsSource: order.logisticsSource,
+      sourceOrderNo: order.sourceOrderNo,
       createdBy: order.createdBy,
       businessType: order.businessType,
       note: order.note,

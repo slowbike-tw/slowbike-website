@@ -11,6 +11,7 @@ import {
   createProxyBikePackages,
   createStandardBikePackages,
   logisticsStatuses,
+  logisticsSources,
   packageHandlers,
   packageItemTypes,
   productTypes,
@@ -32,10 +33,14 @@ const defaultBatteries = defaultProduct.variants.flatMap(
 );
 
 const emptyInput: LogisticsOrderInput = {
+  authUserId: "",
+  customerOrderId: "",
+  logisticsSource: "後台人工",
+  sourceOrderNo: "",
   createdBy: "Ricky",
   businessType: "標準車款 / 客製車款",
   note: "",
-  customer: { name: "", phone: "", lineId: "", address: "", note: "" },
+  customer: { name: "", phone: "", email: "", lineId: "", address: "", note: "" },
   product: {
     type: "標準車款",
     name: standardBikeNames[0],
@@ -109,6 +114,10 @@ export function OrderForm({ order }: { order?: LogisticsOrder }) {
   const [form, setForm] = useState<LogisticsOrderInput>(
     order
       ? {
+          authUserId: order.authUserId ?? "",
+          customerOrderId: order.customerOrderId ?? "",
+          logisticsSource: order.logisticsSource ?? "後台人工",
+          sourceOrderNo: order.sourceOrderNo ?? "",
           createdBy: order.createdBy,
           businessType: order.businessType,
           note: order.note,
@@ -315,6 +324,62 @@ export function OrderForm({ order }: { order?: LogisticsOrder }) {
     <form onSubmit={handleSubmit} className="grid gap-5">
       <Section number="01" title="訂單基本資料" description="設定業務分類與負責建立人。">
         <div className="grid gap-4 md:grid-cols-2">
+          <Field label="物流單來源">
+            <select
+              className={inputClass}
+              value={form.logisticsSource ?? "後台人工"}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  logisticsSource:
+                    event.target.value as LogisticsOrderInput["logisticsSource"],
+                }))
+              }
+            >
+              {logisticsSources.map((source) => (
+                <option key={source}>{source}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="來源訂單編號">
+            <input
+              className={inputClass}
+              value={form.sourceOrderNo ?? ""}
+              placeholder="官網訂單、線下訂單或舊單號"
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  sourceOrderNo: event.target.value,
+                }))
+              }
+            />
+          </Field>
+          <Field label="會員 ID（選填）">
+            <input
+              className={inputClass}
+              value={form.authUserId ?? ""}
+              placeholder="未綁定會員可留空"
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  authUserId: event.target.value.trim(),
+                }))
+              }
+            />
+          </Field>
+          <Field label="正式訂單 ID（選填）">
+            <input
+              className={inputClass}
+              value={form.customerOrderId ?? ""}
+              placeholder="官網付款完成後自動帶入"
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  customerOrderId: event.target.value.trim(),
+                }))
+              }
+            />
+          </Field>
           <Field label="業務類型">
             <select
               className={inputClass}
@@ -369,6 +434,14 @@ export function OrderForm({ order }: { order?: LogisticsOrder }) {
               className={inputClass}
               value={form.customer.phone}
               onChange={(event) => setNested("customer", "phone", event.target.value)}
+            />
+          </Field>
+          <Field label="Email">
+            <input
+              type="email"
+              className={inputClass}
+              value={form.customer.email ?? ""}
+              onChange={(event) => setNested("customer", "email", event.target.value)}
             />
           </Field>
           <Field label="LINE ID">

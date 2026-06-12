@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
+import { ProductVisual } from "@/components/product-visual";
 import { BikePlaceholder, CheckList, LinkButton, SectionHeading } from "@/components/ui";
 import {
   bikes,
@@ -87,7 +88,13 @@ export default function Home() {
               >
                 <article>
                   <div className={`h-64 bg-gradient-to-br ${bike.tone}`}>
-                    <BikePlaceholder name={bike.name} mark={bike.mark} />
+                    <ProductVisual
+                      name={bike.name}
+                      series={bike.seriesLabel}
+                      image={bike.image}
+                      tone={bike.visualTone}
+                      compact
+                    />
                   </div>
                   <div className="p-6">
                     <div className="flex items-start justify-between gap-4">

@@ -7,6 +7,7 @@ type SupabaseRequestOptions = {
   method?: "GET" | "POST" | "PATCH";
   body?: unknown;
   prefer?: string;
+  accessToken?: string;
 };
 
 async function request<T>(path: string, options: SupabaseRequestOptions = {}) {
@@ -18,9 +19,11 @@ async function request<T>(path: string, options: SupabaseRequestOptions = {}) {
     method: options.method ?? "GET",
     headers: {
       apikey: supabaseAnonKey,
-      ...(supabaseAnonKey.startsWith("eyJ")
-        ? { Authorization: `Bearer ${supabaseAnonKey}` }
-        : {}),
+      ...(options.accessToken
+        ? { Authorization: `Bearer ${options.accessToken}` }
+        : supabaseAnonKey.startsWith("eyJ")
+          ? { Authorization: `Bearer ${supabaseAnonKey}` }
+          : {}),
       "Content-Type": "application/json",
       ...(options.prefer ? { Prefer: options.prefer } : {}),
     },
@@ -38,8 +41,8 @@ async function request<T>(path: string, options: SupabaseRequestOptions = {}) {
 }
 
 export const supabase = {
-  select<T>(table: string, query: string) {
-    return request<T>(`${table}?${query}`);
+  select<T>(table: string, query: string, accessToken?: string) {
+    return request<T>(`${table}?${query}`, { accessToken });
   },
   insert<T>(table: string, value: unknown) {
     return request<T>(table, {
@@ -53,6 +56,17 @@ export const supabase = {
       method: "PATCH",
       body: value,
       prefer: "return=representation",
+    });
+  },
+  rpc<T>(
+    functionName: string,
+    value: unknown,
+    accessToken?: string,
+  ) {
+    return request<T>(`rpc/${functionName}`, {
+      method: "POST",
+      body: value,
+      accessToken,
     });
   },
 };

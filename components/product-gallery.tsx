@@ -49,7 +49,7 @@ export function ProductGallery({ product }: { product: Product }) {
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <div className="overflow-hidden rounded-[2rem] bg-white shadow-soft">
         <div
           ref={viewportRef}

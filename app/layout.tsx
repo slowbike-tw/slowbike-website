@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { CartProvider } from "@/components/cart-provider";
+import { MemberAuthProvider } from "@/components/member/auth-provider";
 import { SiteShell } from "@/components/site-shell";
 
 export const metadata: Metadata = {
@@ -16,7 +17,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="zh-Hant">
       <body>
         <CartProvider>
-          <SiteShell>{children}</SiteShell>
+          <MemberAuthProvider>
+            <SiteShell>{children}</SiteShell>
+          </MemberAuthProvider>
         </CartProvider>
       </body>
     </html>

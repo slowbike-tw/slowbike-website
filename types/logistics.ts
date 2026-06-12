@@ -1,5 +1,14 @@
 export type UserRole = "admin" | "logistics" | "assembly-store";
 
+export type LogisticsSource =
+  | "官網訂單"
+  | "後台人工"
+  | "客製車訂單"
+  | "代購代運"
+  | "同行訂購"
+  | "歷史補建"
+  | "其他";
+
 export type BusinessType =
   | "標準車款 / 客製車款"
   | "代購代運電動車"
@@ -43,6 +52,7 @@ export type PackageHandler =
 export type CustomerInfo = {
   name: string;
   phone: string;
+  email?: string;
   lineId: string;
   address: string;
   note: string;
@@ -88,6 +98,10 @@ export type ProgressEvent = {
 
 export type LogisticsOrder = {
   id: string;
+  authUserId?: string;
+  customerOrderId?: string;
+  logisticsSource?: LogisticsSource;
+  sourceOrderNo?: string;
   orderNumber: string;
   createdAt: string;
   updatedAt: string;

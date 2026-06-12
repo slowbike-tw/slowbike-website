@@ -26,6 +26,13 @@ const homeTones: Record<string, string> = {
   MINI: "from-[#62685b] to-[#20231f]",
 };
 
+const homeImages: Record<string, string> = {
+  FOLD: "/images/products/home/fold-home.jpg",
+  S1: "/images/products/home/s1-home.jpg",
+  NOMA: "/images/products/home/noma-home.jpg",
+  MINI: "/images/products/home/mini-home.jpg",
+};
+
 export const bikes = products.map((product, index) => ({
   name: product.name,
   seriesLabel: product.homeCopy.eyebrow,
@@ -35,6 +42,8 @@ export const bikes = products.map((product, index) => ({
   slogan: product.homeCopy.description,
   uses: product.homeCopy.tags,
   tone: homeTones[product.name],
+  visualTone: product.tone,
+  image: homeImages[product.name] ?? product.media.mainImage,
 }));
 
 export const trustItems = [

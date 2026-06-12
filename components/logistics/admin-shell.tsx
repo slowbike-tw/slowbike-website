@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, LayoutDashboard, Menu, Plus, X } from "lucide-react";
+import { ClipboardList, FilePlus2, LayoutDashboard, Menu, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -9,6 +9,7 @@ const items = [
   { href: "/admin/logistics", label: "儀表板", icon: LayoutDashboard },
   { href: "/admin/logistics/orders", label: "訂單列表", icon: ClipboardList },
   { href: "/admin/logistics/orders/new", label: "新增訂單", icon: Plus },
+  { href: "/admin/logistics/drafts/new", label: "人工訂單草稿", icon: FilePlus2 },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
