@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { CartProvider } from "@/components/cart-provider";
-import { Footer } from "@/components/footer";
-import { Header } from "@/components/header";
+import { SiteShell } from "@/components/site-shell";
 
 export const metadata: Metadata = {
   title: {
@@ -17,9 +16,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="zh-Hant">
       <body>
         <CartProvider>
-          <Header />
-          <main>{children}</main>
-          <Footer />
+          <SiteShell>{children}</SiteShell>
         </CartProvider>
       </body>
     </html>

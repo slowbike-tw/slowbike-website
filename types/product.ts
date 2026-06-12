@@ -16,6 +16,7 @@ export type ProductVariant = {
   price: number;
   enabled: boolean;
   description?: string;
+  specs?: ProductSpec[];
 };
 
 export type ProductAccessory = {
@@ -25,12 +26,28 @@ export type ProductAccessory = {
   enabled: boolean;
   image: string | null;
   description?: string;
+  suggestedImage?: string | null;
 };
 
 export type ProductMedia = {
   mainImage: string | null;
   gallery: Array<string | null>;
   colorImages: Record<string, string | null>;
+  records: ProductImageRecord[];
+};
+
+export type ProductImageRecord = {
+  usage: string;
+  file: string | null;
+  suggestedFile: string;
+  status: string;
+  note: string;
+};
+
+export type ProductWarranty = {
+  item: string;
+  period: string;
+  description: string;
 };
 
 export type Product = {
@@ -56,6 +73,16 @@ export type Product = {
   accessories: ProductAccessory[];
   specs: ProductSpec[];
   warrantyEligible: boolean;
+  warranties: ProductWarranty[];
+  salesMode: string;
+  deliveryNote: string;
+  homeDeliveryFee: number;
+  homeCopy: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    tags: string[];
+  };
 };
 
 export type CartItem = {

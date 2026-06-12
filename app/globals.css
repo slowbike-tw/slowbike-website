@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+.product-gallery-scroll {
+  scrollbar-width: none;
+}
+
+.product-gallery-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 :root {
   --background: #f8f7f2;
   --foreground: #111410;
@@ -34,4 +42,29 @@ button {
 
 .text-balance {
   text-wrap: balance;
+}
+
+/* Keep native pickers readable inside the dark logistics status panel. */
+.logistics-status-select {
+  color-scheme: light;
+  color: #111111;
+  background-color: #ffffff;
+  line-height: 1.25;
+}
+
+.logistics-status-select option {
+  color: #111111;
+  background-color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.logistics-status-select option:hover {
+  color: #111111;
+  background-color: #f5f5f5;
+}
+
+.logistics-status-select option:checked {
+  color: #ffffff;
+  background-color: #515b41;
 }

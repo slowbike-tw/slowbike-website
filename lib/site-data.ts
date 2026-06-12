@@ -8,6 +8,7 @@ import {
   ReceiptText,
   Truck,
 } from "lucide-react";
+import { products } from "@/lib/products";
 
 export const navItems = [
   { label: "首頁", href: "/" },
@@ -18,48 +19,23 @@ export const navItems = [
   { label: "聯絡我們", href: "/contact" },
 ];
 
-export const bikes = [
-  {
-    name: "FOLD",
-    seriesLabel: "FOLD Travel Series",
-    lifestyle: "通勤旅行",
-    href: "/bikes/fold",
-    mark: "01",
-    slogan: "一台車搞定通勤、旅行與收納",
-    uses: ["通勤", "露營", "後車廂收納"],
-    tone: "from-[#4c5740] to-[#1c211a]",
-  },
-  {
-    name: "S1",
-    seriesLabel: "S1 Street Series",
-    lifestyle: "個性街頭",
-    href: "/bikes/s1",
-    mark: "02",
-    slogan: "街頭風格玩家首選",
-    uses: ["個性騎乘", "外型優先", "改裝風格"],
-    tone: "from-[#262b24] to-black",
-  },
-  {
-    name: "NOMA",
-    seriesLabel: "NOMA Lifestyle Series",
-    lifestyle: "悠閒慢活",
-    href: "/bikes/noma",
-    mark: "03",
-    slogan: "舒適騎乘，享受慢生活",
-    uses: ["悠閒騎乘", "日常購物", "慢生活移動"],
-    tone: "from-[#7b816d] to-[#30352b]",
-  },
-  {
-    name: "MINI",
-    seriesLabel: "MINI Light Series",
-    lifestyle: "輕巧代步",
-    href: "/bikes/mini",
-    mark: "04",
-    slogan: "輕巧好收納，日常代步首選",
-    uses: ["短程代步", "初次入門", "有限收納空間"],
-    tone: "from-[#62685b] to-[#20231f]",
-  },
-];
+const homeTones: Record<string, string> = {
+  FOLD: "from-[#4c5740] to-[#1c211a]",
+  S1: "from-[#262b24] to-black",
+  NOMA: "from-[#7b816d] to-[#30352b]",
+  MINI: "from-[#62685b] to-[#20231f]",
+};
+
+export const bikes = products.map((product, index) => ({
+  name: product.name,
+  seriesLabel: product.homeCopy.eyebrow,
+  lifestyle: product.homeCopy.title,
+  href: `/bikes/${product.slug}`,
+  mark: String(index + 1).padStart(2, "0"),
+  slogan: product.homeCopy.description,
+  uses: product.homeCopy.tags,
+  tone: homeTones[product.name],
+}));
 
 export const trustItems = [
   { title: "可刷卡分期", icon: CreditCard },

@@ -4,6 +4,7 @@ import { Check, MessageCircle, Minus, Plus, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/components/cart-provider";
+import { useProductSelection } from "@/components/product-selection-provider";
 import { formatPrice, getConfigurationPrice } from "@/lib/products";
 import type { Product } from "@/types/product";
 
@@ -17,13 +18,14 @@ export function AddToCart({
   const { addItem } = useCart();
   const enabledVariants = product.variants.filter((variant) => variant.enabled);
   const enabledAccessories = product.accessories.filter((accessory) => accessory.enabled);
+  const { color, setColor } = useProductSelection();
   const [variantId, setVariantId] = useState(enabledVariants[0]?.id ?? "");
-  const [color, setColor] = useState(product.colors[0]?.name ?? "標準款");
   const [accessoryIds, setAccessoryIds] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const unitPrice = getConfigurationPrice(product, variantId, accessoryIds);
   const configurationTotal = unitPrice === null ? null : unitPrice * quantity;
+  const selectedVariant = enabledVariants.find((variant) => variant.id === variantId);
 
   function handleAdd() {
     if (!variantId) return;
@@ -68,6 +70,26 @@ export function AddToCart({
             </button>
           ))}
         </div>
+        {selectedVariant && (
+          <div className="mt-3 rounded-2xl bg-white/60 p-4">
+            <p className="text-sm font-black">{selectedVariant.name}</p>
+            {selectedVariant.description && (
+              <p className="mt-1 text-xs leading-5 text-ink/50">
+                {selectedVariant.description}
+              </p>
+            )}
+            {selectedVariant.specs && (
+              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                {selectedVariant.specs.slice(0, 4).map((spec) => (
+                  <p key={spec.label}>
+                    <span className="text-ink/40">{spec.label}</span>
+                    <span className="ml-2 font-bold">{spec.value}</span>
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div>
         <p className="mt-6 text-xs font-black tracking-[0.16em] text-ink/45">選擇車色</p>

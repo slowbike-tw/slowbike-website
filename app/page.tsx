@@ -19,6 +19,7 @@ import {
   serviceCards,
   trustItems,
 } from "@/lib/site-data";
+import { homeCatalogCopy } from "@/lib/products";
 
 export default function Home() {
   return (
@@ -66,8 +67,11 @@ export default function Home() {
           <div className="flex flex-col justify-between gap-7 sm:flex-row sm:items-end">
             <SectionHeading
               eyebrow="STANDARD SERIES"
-              title="四種生活，一台剛剛好的車"
-              description="從每日通勤到週末旅行，依照你的使用情境選擇最合適的車款。"
+              title={homeCatalogCopy?.title ?? "四種生活，一台剛剛好的車"}
+              description={
+                homeCatalogCopy?.description ??
+                "從每日通勤到週末旅行，依照你的使用情境選擇最合適的車款。"
+              }
             />
             <Link href="/bikes" className="inline-flex items-center gap-2 text-sm font-black text-olive-700">
               查看全部車款 <ArrowRight size={17} />

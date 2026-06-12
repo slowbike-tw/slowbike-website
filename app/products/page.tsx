@@ -6,7 +6,7 @@ import { products } from "@/lib/products";
 
 export const metadata: Metadata = {
   title: "商品系列",
-  description: "探索 SlowBike FOLD、S1、NOMA、MINI 四大電動腳踏車系列。",
+  description: "探索 SlowBike FOLD、S1、NOMA、MINI 四款正式車系。",
 };
 
 export default function ProductsPage() {
@@ -14,8 +14,8 @@ export default function ProductsPage() {
     <>
       <PageHero
         eyebrow="SLOWBIKE COLLECTION"
-        title="選一台，適合你生活的車"
-        description="從旅行、街頭、樂活到輕行，四種系列對應不同生活節奏。正式規格與售價將依實車到貨資訊更新。"
+        title="找到適合你的電動腳踏車"
+        description="商品版本、售價、車色、配件與規格皆以 SlowBike 正式商品資料庫為準。"
       />
       <section className="py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
@@ -29,8 +29,8 @@ export default function ProductsPage() {
       <section className="border-y border-black/10 bg-white py-14">
         <div className="mx-auto grid max-w-7xl gap-8 px-5 md:grid-cols-3 lg:px-8">
           <ServiceNote icon={CircleHelp} title="專人選車" text="依用途、身高與預算協助評估。" />
-          <ServiceNote icon={Truck} title="交車安排" text="支援門市交車與全台配送。" />
-          <ServiceNote icon={ShieldCheck} title="售後保固" text="商品交車後可登錄電子保固。" />
+          <ServiceNote icon={Truck} title="交車安排" text="下單後安排製作與交車，依實際排程通知。" />
+          <ServiceNote icon={ShieldCheck} title="一年保固" text="車架、控制器與電池皆提供一年保固。" />
         </div>
       </section>
     </>

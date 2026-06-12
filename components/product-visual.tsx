@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
 export function ProductVisual({
   name,
@@ -15,15 +18,22 @@ export function ProductVisual({
   priority?: boolean;
   compact?: boolean;
 }) {
-  if (image) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [image]);
+
+  if (image && !imageFailed) {
     return (
-      <div className="relative h-full min-h-64 overflow-hidden">
+      <div className={`relative h-full overflow-hidden bg-white ${compact ? "min-h-0" : "min-h-64"}`}>
         <Image
           src={image}
           alt={`${name} ${series}電動腳踏車`}
           fill
           priority={priority}
-          className="object-cover"
+          onError={() => setImageFailed(true)}
+          className="object-contain"
           sizes={compact ? "(max-width: 768px) 100vw, 50vw" : "(max-width: 1024px) 100vw, 60vw"}
         />
       </div>

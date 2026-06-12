@@ -3,8 +3,9 @@ import { ArrowLeft, Check, ShieldCheck, Truck } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddToCart } from "@/components/add-to-cart";
+import { ProductGallery } from "@/components/product-gallery";
 import { ProductCard } from "@/components/product-card";
-import { ProductVisual } from "@/components/product-visual";
+import { ProductSelectionProvider } from "@/components/product-selection-provider";
 import { formatPrice, getProductBySlug, getStartingPrice, products } from "@/lib/products";
 
 type ProductPageProps = {
@@ -31,7 +32,6 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   if (!product) notFound();
 
   const related = products.filter((item) => item.id !== product.id).slice(0, 2);
-
   return (
     <>
       <section className="border-b border-black/10 bg-[#eeece3]">
@@ -43,20 +43,10 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
       </section>
 
       <section className="bg-[#eeece3] pb-16 lg:pb-24">
-        <div className="mx-auto grid max-w-7xl gap-9 px-5 lg:grid-cols-[1.15fr_0.85fr] lg:items-start lg:px-8">
-          <div className="overflow-hidden rounded-[2rem] shadow-soft">
-            <div className="h-[440px] lg:h-[650px]">
-              <ProductVisual
-                name={product.name}
-                series={product.series}
-                image={product.media.mainImage}
-                tone={product.tone}
-                priority
-              />
-            </div>
-          </div>
-
-          <div className="lg:sticky lg:top-28 lg:pt-5">
+        <ProductSelectionProvider product={product}>
+          <div className="mx-auto grid max-w-7xl gap-9 px-5 lg:grid-cols-[1.15fr_0.85fr] lg:items-start lg:px-8">
+            <ProductGallery product={product} />
+            <div className="lg:sticky lg:top-28 lg:pt-5">
             <div className="flex items-center justify-between gap-4">
               <p className="text-xs font-black tracking-[0.24em] text-olive-600">{product.englishSeries}</p>
               <span className="rounded-full bg-white/70 px-3 py-2 text-[10px] font-black text-olive-700">
@@ -83,15 +73,19 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
             <div className="mt-7 grid grid-cols-2 gap-3">
               <div className="rounded-2xl bg-white/55 p-4">
                 <Truck size={18} className="text-olive-700" />
-                <p className="mt-3 text-xs font-black">全台配送</p>
+                <p className="mt-3 text-xs font-black">
+                  宅配運費 {formatPrice(product.homeDeliveryFee)}
+                </p>
               </div>
               <div className="rounded-2xl bg-white/55 p-4">
                 <ShieldCheck size={18} className="text-olive-700" />
-                <p className="mt-3 text-xs font-black">電子保固支援</p>
+                <p className="mt-3 text-xs font-black">SlowBike 全車系保固</p>
               </div>
             </div>
+            <p className="mt-4 text-xs leading-6 text-ink/45">{product.deliveryNote}</p>
+            </div>
           </div>
-        </div>
+        </ProductSelectionProvider>
       </section>
 
       <section className="py-20 lg:py-28">
@@ -122,9 +116,30 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                 </div>
               ))}
             </div>
-            <p className="mt-6 text-xs leading-6 text-white/35">
-              本頁為 V1 商品框架，實際馬達、電池、尺寸與續航等規格將於實車到貨後更新。
-            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-black/10 bg-white py-16 lg:py-20">
+        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr]">
+            <div>
+              <p className="text-xs font-black tracking-[0.24em] text-olive-600">WARRANTY</p>
+              <h2 className="mt-4 text-3xl font-black tracking-[-0.04em]">保固內容</h2>
+              <p className="mt-4 text-sm leading-7 text-ink/55">
+                {product.salesMode}商品，交車後依正式資料庫所列項目提供保固支援。
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {product.warranties.map((warranty) => (
+                <article key={warranty.item} className="rounded-2xl bg-sand p-5">
+                  <ShieldCheck size={19} className="text-olive-700" />
+                  <h3 className="mt-4 font-black">{warranty.item}</h3>
+                  <p className="mt-2 text-xl font-black text-olive-700">{warranty.period}</p>
+                  <p className="mt-2 text-xs leading-5 text-ink/45">{warranty.description}</p>
+                </article>
+              ))}
+            </div>
           </div>
         </div>
       </section>
