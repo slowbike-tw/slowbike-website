@@ -295,15 +295,19 @@ export function OrderForm({ order }: { order?: LogisticsOrder }) {
     }));
   }
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
-    if (order) {
-      updateOrder(order.id, form);
-      router.push(`/admin/logistics/orders/${order.id}`);
-    } else {
-      const created = addOrder(form);
-      router.push(`/admin/logistics/orders/${created.id}`);
+    try {
+      if (order) {
+        await updateOrder(order.id, form);
+        router.push(`/admin/logistics/orders/${order.id}`);
+      } else {
+        const created = await addOrder(form);
+        router.push(`/admin/logistics/orders/${created.id}`);
+      }
+    } finally {
+      setSaving(false);
     }
   }
 

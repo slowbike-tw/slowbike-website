@@ -272,10 +272,10 @@ export default function LogisticsOrderDetailPage() {
           <div className="rounded-[1.5rem] border border-black/10 bg-white p-5">
             <p className="flex items-center gap-2 text-sm font-black">
               <UserRound size={17} className="text-olive-600" />
-              V1 使用說明
+              V2 同步說明
             </p>
             <p className="mt-2 text-xs leading-6 text-ink/45">
-              本版資料儲存在目前瀏覽器。更換手機或清除瀏覽資料後不會同步。
+              Supabase 設定完成後會同步雲端資料；連線異常時保留本機快取，避免工作中斷。
             </p>
           </div>
         </aside>

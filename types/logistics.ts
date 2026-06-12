@@ -92,6 +92,8 @@ export type LogisticsOrder = {
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+  responsibleStore?: string;
+  logisticsParty?: string;
   businessType: BusinessType;
   note: string;
   customer: CustomerInfo;

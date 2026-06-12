@@ -12,8 +12,10 @@ export function QuickStatusEditor({ order }: { order: LogisticsOrder }) {
   const [assemblyStatus, setAssemblyStatus] = useState(order.assemblyStatus);
   const [deliveryStatus, setDeliveryStatus] = useState(order.deliveryStatus);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  function save() {
+  async function save() {
+    setSaving(true);
     const input: LogisticsOrderInput = {
       createdBy: order.createdBy,
       businessType: order.businessType,
@@ -30,9 +32,13 @@ export function QuickStatusEditor({ order }: { order: LogisticsOrder }) {
       deliveryMethod: order.deliveryMethod,
       photos: order.photos,
     };
-    updateOrder(order.id, input);
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 1800);
+    try {
+      await updateOrder(order.id, input);
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 1800);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const selectClass =
@@ -94,10 +100,11 @@ export function QuickStatusEditor({ order }: { order: LogisticsOrder }) {
         <button
           type="button"
           onClick={save}
+          disabled={saving}
           className="mt-1 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white font-black text-ink"
         >
           <Check size={18} />
-          {saved ? "已儲存" : "儲存進度"}
+          {saving ? "儲存中..." : saved ? "已儲存" : "儲存進度"}
         </button>
       </div>
     </section>
