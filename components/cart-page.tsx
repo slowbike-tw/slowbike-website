@@ -154,13 +154,13 @@ export function CartPage() {
               </div>
             </div>
             <Link
-              href="/contact"
+              href="/checkout"
               className="mt-6 flex min-h-14 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-ink hover:bg-sand"
             >
-              送出購車需求 <ArrowRight size={17} />
+                前往安全結帳 <ArrowRight size={17} />
             </Link>
             <p className="mt-4 text-xs leading-6 text-white/35">
-              V1 僅提供商品選配與購車需求整理，不包含付款頁面、付款請求或任何金流串接。
+                登入會員後可選擇信用卡一次付清、3／6／12 期零利率或 ATM 轉帳。
             </p>
           </aside>
         </div>

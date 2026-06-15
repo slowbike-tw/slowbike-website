@@ -144,6 +144,12 @@ export function OrderConfirmClient({ token }: { token: string }) {
         <div className="mt-7 rounded-2xl bg-olive-50 p-5 text-sm font-bold text-olive-800">
           <CheckCircle2 className="mb-2" />
           此訂單已綁定你的會員 ID，狀態為待付款。
+          <Link
+            href={`/checkout?draft=${encodeURIComponent(token)}`}
+            className="mt-4 flex min-h-12 items-center justify-center rounded-full bg-olive-700 px-5 text-white"
+          >
+            前往付款
+          </Link>
         </div>
       ) : (
         <button
@@ -171,9 +177,6 @@ export function OrderConfirmClient({ token }: { token: string }) {
         </button>
       )}
       {error && <p className="mt-4 text-sm font-bold text-red-700">{error}</p>}
-      <p className="mt-5 rounded-2xl bg-sand p-4 text-center text-sm font-black text-ink/55">
-        付款功能下一階段開放
-      </p>
     </div>
   );
 }

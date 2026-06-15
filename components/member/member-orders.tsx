@@ -112,7 +112,11 @@ export function MemberOrders() {
               </p>
             </div>
             <span className="self-start rounded-full bg-olive-100 px-4 py-2 text-xs font-black text-olive-800">
-              {orderStatusLabels[order.order_status] ?? order.order_status}
+              {order.payment_status === "paid"
+                ? "已付款"
+                : order.payment_status === "awaiting_transfer"
+                  ? "待確認匯款"
+                  : orderStatusLabels[order.order_status] ?? order.order_status}
             </span>
           </div>
           <div className="mt-5 flex items-end justify-between border-t border-black/10 pt-5">
