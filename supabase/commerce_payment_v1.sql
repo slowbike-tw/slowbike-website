@@ -35,6 +35,12 @@ create table if not exists public.payment_settings (
 
 alter table public.payment_settings enable row level security;
 grant select on table public.payment_settings to anon, authenticated;
+grant usage on schema public to service_role;
+grant select, insert, update on table public.customer_orders to service_role;
+grant select, insert, update on table public.order_drafts to service_role;
+grant select, insert, update on table public.member_profiles to service_role;
+grant select, insert, update, delete on table public.logistics_orders to service_role;
+grant select, insert, update on table public.payment_settings to service_role;
 
 drop policy if exists "Public reads payment settings" on public.payment_settings;
 create policy "Public reads payment settings"

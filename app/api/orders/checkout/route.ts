@@ -95,14 +95,11 @@ export async function POST(request: Request) {
         },
       );
     }
-    const rows = await serviceRest<CommerceOrder[]>("customer_orders", {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify({
+    const orderData = {
         auth_user_id: user.id,
+        member_id: memberRows[0]?.id ?? null,
         member_profile_id: memberRows[0]?.id ?? null,
         source_draft_id: sourceDraftId,
-        order_no: orderNo,
         customer: {
           name: body.customer.name,
           phone: body.customer.phone,
@@ -133,8 +130,38 @@ export async function POST(request: Request) {
         checkout_token: crypto.randomUUID(),
         created_by: createdBy,
         responsible_store: responsibleStore,
-      }),
-    });
+        updated_at: new Date().toISOString(),
+    };
+
+    let rows: CommerceOrder[];
+    if (sourceDraftId) {
+      const existing = await serviceRest<CommerceOrder[]>(
+        `customer_orders?source_draft_id=eq.${sourceDraftId}&auth_user_id=eq.${user.id}&select=*&limit=1`,
+      );
+      if (existing[0]?.payment_status === "paid") {
+        throw new Error("此訂單已完成付款");
+      }
+      rows = existing[0]
+        ? await serviceRest<CommerceOrder[]>(
+            `customer_orders?id=eq.${existing[0].id}`,
+            {
+              method: "PATCH",
+              headers: { Prefer: "return=representation" },
+              body: JSON.stringify(orderData),
+            },
+          )
+        : await serviceRest<CommerceOrder[]>("customer_orders", {
+            method: "POST",
+            headers: { Prefer: "return=representation" },
+            body: JSON.stringify({ ...orderData, order_no: orderNo }),
+          });
+    } else {
+      rows = await serviceRest<CommerceOrder[]>("customer_orders", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ ...orderData, order_no: orderNo }),
+      });
+    }
 
     if (sourceDraftId) {
       await serviceRest(`order_drafts?id=eq.${sourceDraftId}`, {
