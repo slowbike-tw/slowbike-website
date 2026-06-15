@@ -63,9 +63,16 @@ export function MemberOrders() {
     );
   }
 
+  const convertedDraftIds = new Set(
+    orders.map((order) => order.source_draft_id).filter(Boolean),
+  );
+  const visibleDrafts = drafts.filter(
+    (draft) => !convertedDraftIds.has(draft.id),
+  );
+
   return (
     <div className="grid gap-4">
-      {drafts.map((draft) => (
+      {visibleDrafts.map((draft) => (
         <article
           key={draft.id}
           className="rounded-3xl border border-olive-200 bg-olive-50 p-5 sm:p-7"

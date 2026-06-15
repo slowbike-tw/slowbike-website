@@ -52,6 +52,7 @@ export type Order = {
 export type MemberOrderRow = {
   id: string;
   auth_user_id: string;
+  source_draft_id: string | null;
   order_no: string;
   customer: {
     name?: string;
