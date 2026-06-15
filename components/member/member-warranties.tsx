@@ -22,7 +22,7 @@ export function MemberWarranties() {
       })
       .catch(() => {
         if (active) {
-          setError("保固資料表尚未啟用，請先執行第 4 階段會員系統 SQL。");
+          setError("保固資料暫時無法讀取，請稍後再試。");
         }
       })
       .finally(() => {
@@ -42,9 +42,9 @@ export function MemberWarranties() {
         <span className="mx-auto grid size-14 place-items-center rounded-full bg-olive-100 text-olive-700">
           <ShieldCheck size={23} />
         </span>
-        <h2 className="mt-6 text-xl font-black">電子保固功能準備中</h2>
+        <h2 className="mt-6 text-xl font-black">目前尚無保固資料</h2>
         <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-ink/50">
-          此頁已使用會員 ID 查詢架構。後續交車完成時，可自動建立並綁定電子保固卡。
+          完成交車與保固登錄後，相關資訊會顯示在這裡。
         </p>
       </div>
     );

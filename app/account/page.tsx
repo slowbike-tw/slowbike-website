@@ -10,7 +10,7 @@ export default function AccountPage() {
     <>
       <PageHero
         eyebrow="SLOWBIKE MEMBER"
-        title="一個會員 ID，串起每一段旅程"
+        title="你的 SlowBike 旅程，都在這裡"
         description="使用 Email 一次性驗證登入，集中查看你的訂單、物流與電子保固。"
       />
       <section className="py-14 lg:py-20">

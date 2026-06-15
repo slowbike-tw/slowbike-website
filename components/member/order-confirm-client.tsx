@@ -143,7 +143,7 @@ export function OrderConfirmClient({ token }: { token: string }) {
       {alreadyClaimed ? (
         <div className="mt-7 rounded-2xl bg-olive-50 p-5 text-sm font-bold text-olive-800">
           <CheckCircle2 className="mb-2" />
-          此訂單已綁定你的會員 ID，狀態為待付款。
+          訂單已完成確認，目前狀態為待付款。
           <Link
             href={`/checkout?draft=${encodeURIComponent(token)}`}
             className="mt-4 flex min-h-12 items-center justify-center rounded-full bg-olive-700 px-5 text-white"

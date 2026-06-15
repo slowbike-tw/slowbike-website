@@ -127,7 +127,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               <p className="text-xs font-black tracking-[0.24em] text-olive-600">WARRANTY</p>
               <h2 className="mt-4 text-3xl font-black tracking-[-0.04em]">保固內容</h2>
               <p className="mt-4 text-sm leading-7 text-ink/55">
-                {product.salesMode}商品，交車後依正式資料庫所列項目提供保固支援。
+                {product.salesMode}商品，完成交車後依各項保固內容提供售後支援。
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">

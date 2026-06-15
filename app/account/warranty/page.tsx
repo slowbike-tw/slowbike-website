@@ -9,7 +9,7 @@ export default function MemberWarrantyPage() {
     <MemberPageShell
       eyebrow="MY WARRANTY"
       title="我的保固"
-      description="電子保固卡頁面已預留，後續沿用相同會員 ID 自動歸戶。"
+      description="查看已完成登錄的 SlowBike 商品保固資訊。"
     >
       <MemberWarranties />
     </MemberPageShell>

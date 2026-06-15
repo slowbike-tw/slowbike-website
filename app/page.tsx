@@ -10,9 +10,10 @@ import {
   Truck,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { Logo } from "@/components/logo";
 import { ProductVisual } from "@/components/product-visual";
-import { BikePlaceholder, CheckList, LinkButton, SectionHeading } from "@/components/ui";
+import { CheckList, LinkButton, SectionHeading } from "@/components/ui";
 import {
   bikes,
   deliveryItems,
@@ -53,7 +54,14 @@ export default function Home() {
             <div className="absolute left-[8%] top-[10%] size-[82%] rounded-full bg-olive-600" />
             <div className="absolute left-[18%] top-[19%] size-[63%] rounded-full border border-white/35" />
             <div className="absolute inset-x-0 bottom-[9%] mx-auto h-[66%] w-[92%] -rotate-2 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#31372b] via-[#171b16] to-black shadow-soft sm:w-[84%] lg:bottom-[4%]">
-              <BikePlaceholder name="FOLD" mark="FEATURED / 01" />
+              <Image
+                src="/images/products/home/fold-home.jpg"
+                alt="SlowBike FOLD 旅行系列電動腳踏車"
+                fill
+                priority
+                className="object-cover"
+                sizes="(max-width: 1024px) 92vw, 48vw"
+              />
             </div>
             <div className="absolute bottom-[3%] left-0 rounded-2xl bg-white px-5 py-4 shadow-soft lg:bottom-[2%]">
               <p className="text-[10px] font-black tracking-[0.2em] text-olive-600">主力推薦</p>

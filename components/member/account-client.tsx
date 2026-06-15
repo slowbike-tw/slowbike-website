@@ -106,9 +106,8 @@ export function AccountClient() {
                 </p>
               )}
             </div>
-            <div className="rounded-2xl bg-white/10 px-4 py-3 text-xs text-white/55">
-              會員 ID
-              <strong className="mt-1 block break-all text-white">{user.id}</strong>
+            <div className="rounded-2xl bg-white/10 px-4 py-3 text-xs font-bold text-white/70">
+              SlowBike 會員
             </div>
           </div>
         </div>
@@ -118,19 +117,19 @@ export function AccountClient() {
             href="/account/orders"
             icon={Package}
             title="我的訂單"
-            description="查看已綁定此會員 ID 的官網訂單。"
+            description="查看訂單內容、金額與付款狀態。"
           />
           <MemberCard
             href="/account/logistics"
             icon={Route}
             title="我的物流"
-            description="追蹤已綁定此會員 ID 的物流進度。"
+            description="掌握出貨、組裝與交車進度。"
           />
           <MemberCard
             href="/account/warranty"
             icon={ShieldCheck}
             title="我的保固"
-            description="電子保固卡功能已預留。"
+            description="查看已登錄的商品保固資訊。"
           />
         </div>
       </div>
@@ -147,7 +146,7 @@ export function AccountClient() {
           Email 一次性驗證登入
         </h1>
         <p className="mt-3 text-sm leading-7 text-ink/50">
-          不需要設定密碼。第一次登入會自動建立會員，之後所有訂單、物流與保固都使用同一會員 ID。
+          不需要設定密碼。登入後即可集中查看你的訂單、物流與保固資訊。
         </p>
 
         {!sent ? (
@@ -215,9 +214,9 @@ export function AccountClient() {
 
       <div className="rounded-[2rem] bg-sand p-7 sm:p-9">
         <Smartphone className="text-olive-700" />
-        <h2 className="mt-7 text-2xl font-black">手機 OTP 架構預留</h2>
+        <h2 className="mt-7 text-2xl font-black">手機登入即將推出</h2>
         <p className="mt-3 text-sm leading-7 text-ink/50">
-          已保留 SMS OTP 登入型別與介面位置，目前尚未啟用簡訊供應商或發送功能。
+          未來可使用手機號碼接收驗證碼，更快速地登入會員中心。
         </p>
         <div className="mt-7 rounded-2xl border border-dashed border-black/15 bg-white/60 p-5">
           <p className="text-xs font-black tracking-[0.16em] text-ink/35">

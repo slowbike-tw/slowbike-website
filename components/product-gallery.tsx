@@ -59,7 +59,7 @@ export function ProductGallery({ product }: { product: Product }) {
         >
           {images.map((image, index) => (
             <div
-              key={image ?? "placeholder"}
+              key={image ?? "product-image"}
               className="h-full min-w-full snap-center"
             >
               <ProductVisual
@@ -78,7 +78,7 @@ export function ProductGallery({ product }: { product: Product }) {
         <div className="product-gallery-scroll mt-4 flex gap-3 overflow-x-auto pb-1">
           {images.map((image, index) => (
             <button
-              key={image ?? "placeholder"}
+              key={image ?? "product-image"}
               type="button"
               onClick={() => selectImage(index)}
               aria-label={`查看第 ${index + 1} 張商品圖片`}

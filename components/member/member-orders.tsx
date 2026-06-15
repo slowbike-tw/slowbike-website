@@ -41,7 +41,7 @@ export function MemberOrders() {
       })
       .catch(() => {
         if (active) {
-          setError("訂單資料表尚未啟用，請先執行第 4 階段會員系統 SQL。");
+          setError("訂單資料暫時無法讀取，請稍後再試。");
         }
       })
       .finally(() => {
@@ -58,7 +58,7 @@ export function MemberOrders() {
     return (
       <EmptyState
         title="目前沒有會員訂單"
-        text="未來從購物車完成結帳後，訂單會自動綁定你的會員 ID 並顯示在這裡。"
+        text="完成結帳後，你的訂單會顯示在這裡。"
       />
     );
   }

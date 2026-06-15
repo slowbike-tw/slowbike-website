@@ -15,7 +15,7 @@ export default function ProductsPage() {
       <PageHero
         eyebrow="SLOWBIKE COLLECTION"
         title="找到適合你的電動腳踏車"
-        description="商品版本、售價、車色、配件與規格皆以 SlowBike 正式商品資料庫為準。"
+        description="比較車款版本、售價、車色與配件，找到最適合你的選擇。"
       />
       <section className="py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">

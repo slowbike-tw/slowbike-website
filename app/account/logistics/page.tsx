@@ -9,7 +9,7 @@ export default function MemberLogisticsPage() {
     <MemberPageShell
       eyebrow="MY LOGISTICS"
       title="我的物流"
-      description="以會員 ID 安全查詢物流、組裝與交車進度，不使用電話比對。"
+      description="掌握每一筆訂單的出貨、運輸、組裝與交車進度。"
     >
       <MemberLogistics />
     </MemberPageShell>

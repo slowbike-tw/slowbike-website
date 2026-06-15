@@ -56,9 +56,6 @@ export function ProductVisual({
         </span>
         <span className="mt-4 block text-[10px] font-bold tracking-[0.26em] text-white/55">{series}</span>
       </div>
-      <span className="absolute bottom-5 right-5 text-[9px] font-bold tracking-[0.18em] text-white/30">
-        IMAGE PREVIEW
-      </span>
     </div>
   );
 }

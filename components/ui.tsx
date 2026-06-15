@@ -105,18 +105,3 @@ export function CheckList({ items, light = false }: { items: string[]; light?: b
     </ul>
   );
 }
-
-export function BikePlaceholder({ name, mark }: { name: string; mark: string }) {
-  return (
-    <div className="relative flex h-full min-h-64 items-center justify-center overflow-hidden">
-      <span className="absolute left-5 top-4 text-xs font-black tracking-[0.24em] text-white/45">{mark}</span>
-      <div className="absolute size-48 rounded-full border border-white/15 sm:size-56" />
-      <div className="absolute h-px w-4/5 rotate-[-18deg] bg-white/10" />
-      <div className="relative text-center">
-        <span className="block text-[10px] font-black tracking-[0.4em] text-white/45">SLOWBIKE SERIES</span>
-        <span className="mt-3 block text-4xl font-black tracking-[-0.06em] text-white sm:text-5xl">{name}</span>
-        <span className="mx-auto mt-5 block h-1 w-12 rounded-full bg-olive-300" />
-      </div>
-    </div>
-  );
-}

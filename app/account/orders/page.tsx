@@ -9,7 +9,7 @@ export default function MemberOrdersPage() {
     <MemberPageShell
       eyebrow="MY ORDERS"
       title="我的訂單"
-      description="僅顯示綁定目前會員 ID 的 SlowBike 官網訂單。"
+      description="查看你的 SlowBike 訂單內容、金額與付款狀態。"
     >
       <MemberOrders />
     </MemberPageShell>
