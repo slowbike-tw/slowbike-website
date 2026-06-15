@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { QuickStatusEditor } from "@/components/logistics/quick-status-editor";
+import { DeleteOrderButton } from "@/components/logistics/delete-order-button";
 import { StatusBadge } from "@/components/logistics/status-badge";
 import { useLogistics } from "@/components/logistics/logistics-provider";
 import {
@@ -79,6 +80,11 @@ export default function LogisticsOrderDetailPage() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-2">
+        <DeleteOrderButton
+          orderId={order.id}
+          orderNumber={order.orderNumber}
+        />
         <Link
           href="/admin/logistics/orders"
           className="inline-flex min-h-11 items-center gap-2 text-sm font-black text-ink/55"
@@ -86,6 +92,7 @@ export default function LogisticsOrderDetailPage() {
           <ArrowLeft size={18} />
           返回訂單列表
         </Link>
+        </div>
         <Link
           href={`/admin/logistics/orders/${order.id}/edit`}
           className="inline-flex min-h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-black text-white"

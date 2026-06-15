@@ -9,7 +9,7 @@ const items = [
   { href: "/admin/logistics", label: "儀表板", icon: LayoutDashboard },
   { href: "/admin/logistics/orders", label: "訂單列表", icon: ClipboardList },
   { href: "/admin/logistics/orders/new", label: "新增訂單", icon: Plus },
-  { href: "/admin/logistics/drafts/new", label: "人工訂單草稿", icon: FilePlus2 },
+  { href: "/admin/orders/new", label: "後台建立訂單", icon: FilePlus2 },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

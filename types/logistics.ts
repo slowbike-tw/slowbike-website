@@ -98,6 +98,8 @@ export type ProgressEvent = {
 
 export type LogisticsOrder = {
   id: string;
+  memberId?: string;
+  orderId?: string;
   authUserId?: string;
   customerOrderId?: string;
   logisticsSource?: LogisticsSource;

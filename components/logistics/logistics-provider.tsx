@@ -10,6 +10,7 @@ import {
 } from "react";
 import { seedLogisticsOrders } from "@/data/logistics-orders";
 import {
+  deleteLogisticsOrder,
   fetchLogisticsOrders,
   insertLogisticsOrder,
   isSupabaseConfigured,
@@ -23,6 +24,7 @@ type LogisticsContextValue = {
   ready: boolean;
   addOrder: (input: LogisticsOrderInput) => Promise<LogisticsOrder>;
   updateOrder: (id: string, input: LogisticsOrderInput) => Promise<void>;
+  deleteOrder: (id: string) => Promise<void>;
   getOrder: (id: string) => LogisticsOrder | undefined;
   resetDemoData: () => void;
 };
@@ -164,14 +166,28 @@ export function LogisticsProvider({ children }: { children: React.ReactNode }) {
     (id: string) => orders.find((order) => order.id === id),
     [orders],
   );
+  const deleteOrder = useCallback(async (id: string) => {
+    if (isSupabaseConfigured) {
+      await deleteLogisticsOrder(id);
+    }
+    setOrders((current) => current.filter((order) => order.id !== id));
+  }, []);
   const resetDemoData = useCallback(
     () => setOrders(seedLogisticsOrders.map(normalizeLogisticsOrder)),
     [],
   );
 
   const value = useMemo(
-    () => ({ orders, ready, addOrder, updateOrder, getOrder, resetDemoData }),
-    [orders, ready, addOrder, updateOrder, getOrder, resetDemoData],
+    () => ({
+      orders,
+      ready,
+      addOrder,
+      updateOrder,
+      deleteOrder,
+      getOrder,
+      resetDemoData,
+    }),
+    [orders, ready, addOrder, updateOrder, deleteOrder, getOrder, resetDemoData],
   );
 
   return <LogisticsContext.Provider value={value}>{children}</LogisticsContext.Provider>;

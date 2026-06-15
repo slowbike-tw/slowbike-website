@@ -6,6 +6,8 @@ const TABLE = "logistics_orders";
 
 type LogisticsOrderRow = {
   id: string;
+  member_id: string | null;
+  order_id: string | null;
   auth_user_id: string | null;
   customer_order_id: string | null;
   logistics_source: string;
@@ -37,6 +39,8 @@ type LogisticsOrderRow = {
 function toRow(order: LogisticsOrder): LogisticsOrderRow {
   return {
     id: order.id,
+    member_id: order.memberId || null,
+    order_id: order.orderId || null,
     auth_user_id: order.authUserId || null,
     customer_order_id: order.customerOrderId || null,
     logistics_source: order.logisticsSource ?? "後台人工",
@@ -69,6 +73,8 @@ function toRow(order: LogisticsOrder): LogisticsOrderRow {
 function fromRow(row: LogisticsOrderRow): LogisticsOrder {
   return normalizeLogisticsOrder({
     id: row.id,
+    memberId: row.member_id ?? undefined,
+    orderId: row.order_id ?? undefined,
     authUserId: row.auth_user_id ?? undefined,
     customerOrderId: row.customer_order_id ?? undefined,
     logisticsSource:
@@ -135,6 +141,16 @@ export async function updateLogisticsOrder(order: LogisticsOrder) {
     toRow(order),
   );
   return rows[0] ? fromRow(rows[0]) : order;
+}
+
+export async function deleteLogisticsOrder(id: string) {
+  const rows = await supabase.delete<LogisticsOrderRow[]>(
+    TABLE,
+    `id=eq.${encodeURIComponent(id)}`,
+  );
+  if (rows.length === 0) {
+    throw new Error("找不到要刪除的物流單，可能已被其他人刪除。");
+  }
 }
 
 export { isSupabaseConfigured };

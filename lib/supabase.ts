@@ -4,7 +4,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
 type SupabaseRequestOptions = {
-  method?: "GET" | "POST" | "PATCH";
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   prefer?: string;
   accessToken?: string;
@@ -55,6 +55,12 @@ export const supabase = {
     return request<T>(`${table}?${query}`, {
       method: "PATCH",
       body: value,
+      prefer: "return=representation",
+    });
+  },
+  delete<T>(table: string, query: string) {
+    return request<T>(`${table}?${query}`, {
+      method: "DELETE",
       prefer: "return=representation",
     });
   },

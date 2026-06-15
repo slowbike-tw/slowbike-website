@@ -9,12 +9,12 @@ export async function createOrderDraft(input: OrderDraftInput) {
     .slice(0, 10)
     .replaceAll("-", "")}-${String(date.getTime()).slice(-5)}`;
 
-  const rows = await supabase.insert<OrderDraft[]>("order_drafts", {
-    confirmation_token: token,
-    draft_no: draftNo,
-    auth_user_id: null,
-    ...input,
-    status: "draft",
+  const rows = await supabase.rpc<OrderDraft[]>("create_order_draft", {
+    draft_data: {
+      confirmation_token: token,
+      draft_no: draftNo,
+      ...input,
+    },
   });
   return rows[0];
 }

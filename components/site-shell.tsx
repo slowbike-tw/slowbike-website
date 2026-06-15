@@ -6,7 +6,7 @@ import { Header } from "@/components/header";
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLogisticsAdmin = pathname.startsWith("/admin/logistics");
+  const isLogisticsAdmin = pathname.startsWith("/admin/");
 
   if (isLogisticsAdmin) return <main>{children}</main>;
 
@@ -18,4 +18,3 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
     </>
   );
 }
-
