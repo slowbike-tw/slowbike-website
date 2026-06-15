@@ -54,9 +54,47 @@ export async function POST(request: Request) {
     const total = subtotal + deliveryFee;
     const now = Date.now();
     const orderNo = `SB${new Date().toISOString().slice(0, 10).replaceAll("-", "")}${String(now).slice(-6)}`;
-    const memberRows = await serviceRest<Array<{ id: string }>>(
+    let memberRows = await serviceRest<Array<{ id: string; auth_user_id: string | null }>>(
       `member_profiles?auth_user_id=eq.${user.id}&select=id&limit=1`,
     );
+    if (!memberRows[0] && user.email) {
+      memberRows = await serviceRest<Array<{ id: string; auth_user_id: string | null }>>(
+        `member_profiles?email=ilike.${encodeURIComponent(user.email)}&select=id,auth_user_id&limit=1`,
+      );
+    }
+    if (memberRows[0] && !memberRows[0].auth_user_id) {
+      memberRows = await serviceRest<Array<{ id: string; auth_user_id: string | null }>>(
+        `member_profiles?id=eq.${memberRows[0].id}`,
+        {
+          method: "PATCH",
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify({
+            auth_user_id: user.id,
+            name: body.customer.name,
+            phone: body.customer.phone,
+            email: body.customer.email,
+            line_id: body.customer.lineId ?? "",
+            updated_at: new Date().toISOString(),
+          }),
+        },
+      );
+    }
+    if (!memberRows[0]) {
+      memberRows = await serviceRest<Array<{ id: string; auth_user_id: string | null }>>(
+        "member_profiles",
+        {
+          method: "POST",
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify({
+            auth_user_id: user.id,
+            name: body.customer.name,
+            phone: body.customer.phone,
+            email: body.customer.email,
+            line_id: body.customer.lineId ?? "",
+          }),
+        },
+      );
+    }
     const rows = await serviceRest<CommerceOrder[]>("customer_orders", {
       method: "POST",
       headers: { Prefer: "return=representation" },

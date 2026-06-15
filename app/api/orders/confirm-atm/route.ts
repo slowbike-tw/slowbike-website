@@ -9,9 +9,10 @@ export async function POST(request: Request) {
     await finalizePaidOrder(orderNo, { Status: "SUCCESS", PaymentType: "ATM_MANUAL" });
     return NextResponse.json({ success: true });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "確認收款失敗";
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "確認收款失敗" },
-      { status: 400 },
+      { error: message },
+      { status: message.includes("登入") ? 401 : message.includes("權限") ? 403 : 400 },
     );
   }
 }

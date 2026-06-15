@@ -80,7 +80,9 @@ export async function requestEmailOtp(
   const redirectTo =
     typeof window === "undefined"
       ? ""
-      : `?redirect_to=${encodeURIComponent(`${window.location.origin}/account`)}`;
+      : `?redirect_to=${encodeURIComponent(
+          `${window.location.origin}${window.location.pathname}${window.location.search}`,
+        )}`;
 
   return authRequest<Record<string, never>>(`otp${redirectTo}`, {
     body: {
@@ -143,6 +145,10 @@ export function sessionFromUrlHash(hash: string) {
     expires_at: Math.floor(Date.now() / 1000) + expiresIn,
     token_type: params.get("token_type") ?? "bearer",
   };
+}
+
+export function sessionFromUrlParams(search: string) {
+  return sessionFromUrlHash(search.replace(/^\?/, "#"));
 }
 
 export type PhoneOtpReservation = {

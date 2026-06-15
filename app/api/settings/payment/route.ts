@@ -34,9 +34,10 @@ export async function PUT(request: Request) {
         });
     return NextResponse.json(saved);
   } catch (error) {
+    const message = error instanceof Error ? error.message : "付款設定儲存失敗";
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "付款設定儲存失敗" },
-      { status: 400 },
+      { error: message },
+      { status: message.includes("登入") ? 401 : message.includes("權限") ? 403 : 400 },
     );
   }
 }

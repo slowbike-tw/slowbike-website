@@ -7,6 +7,10 @@ export async function GET(request: Request) {
     const rows = await serviceRest("customer_orders?select=*&order=created_at.desc");
     return NextResponse.json(rows);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "讀取失敗" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "讀取失敗";
+    return NextResponse.json(
+      { error: message },
+      { status: message.includes("登入") ? 401 : message.includes("權限") ? 403 : 500 },
+    );
   }
 }

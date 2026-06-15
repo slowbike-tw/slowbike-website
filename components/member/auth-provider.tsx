@@ -15,6 +15,7 @@ import {
   refreshAuthSession,
   requestEmailOtp,
   sessionFromUrlHash,
+  sessionFromUrlParams,
   signOutAuth,
   updateAuthUser,
   verifyEmailOtp,
@@ -59,9 +60,11 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
     async function restoreSession() {
       try {
         const hashSession = sessionFromUrlHash(window.location.hash);
-        if (hashSession) {
-          const authUser = await getAuthUser(hashSession.access_token);
-          const nextSession: AuthSession = { ...hashSession, user: authUser };
+        const callbackSession =
+          hashSession ?? sessionFromUrlParams(window.location.search);
+        if (callbackSession) {
+          const authUser = await getAuthUser(callbackSession.access_token);
+          const nextSession: AuthSession = { ...callbackSession, user: authUser };
           saveSession(nextSession);
           window.history.replaceState(null, "", window.location.pathname);
           if (active) {
