@@ -175,7 +175,7 @@ export async function POST(request: Request) {
       responsibleStore = draft.responsible_store;
     } else {
       if (!user) throw new Error("請先登入會員再進行官網結帳。");
-      const resolved = resolveCartItems(body.cartItems ?? []);
+      const resolved = await resolveCartItems(body.cartItems ?? []);
       items = resolved.items;
       subtotal = resolved.subtotal;
     }

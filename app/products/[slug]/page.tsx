@@ -6,19 +6,20 @@ import { AddToCart } from "@/components/add-to-cart";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductCard } from "@/components/product-card";
 import { ProductSelectionProvider } from "@/components/product-selection-provider";
-import { formatPrice, getProductBySlug, getStartingPrice, products } from "@/lib/products";
+import { getStoreProductBySlug, getStoreProducts } from "@/lib/product-cms";
+import { formatPrice, getStartingPrice, products as fallbackProducts } from "@/lib/products";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
 };
 
 export function generateStaticParams() {
-  return products.map((product) => ({ slug: product.slug }));
+  return fallbackProducts.map((product) => ({ slug: product.slug }));
 }
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getStoreProductBySlug(slug);
   if (!product) return {};
   return {
     title: `${product.name} ${product.series}`,
@@ -28,9 +29,10 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
 export default async function ProductDetailPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getStoreProductBySlug(slug);
   if (!product) notFound();
 
+  const products = await getStoreProducts();
   const related = products.filter((item) => item.id !== product.id).slice(0, 2);
   return (
     <>

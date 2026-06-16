@@ -1,14 +1,13 @@
 "use client";
 
-import { LogOut, Package, Route, ShieldCheck, UserRound } from "lucide-react";
+import { LogOut, Package, ShieldCheck, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemberAuth } from "@/components/member/auth-provider";
 
 const memberLinks = [
-  { href: "/account", label: "會員首頁", icon: UserRound },
+  { href: "/account", label: "會員中心", icon: UserRound },
   { href: "/account/orders", label: "我的訂單", icon: Package },
-  { href: "/account/logistics", label: "我的物流", icon: Route },
   { href: "/account/warranty", label: "我的保固", icon: ShieldCheck },
 ];
 

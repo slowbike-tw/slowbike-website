@@ -6,7 +6,6 @@ import {
   LoaderCircle,
   Mail,
   Package,
-  Route,
   ShieldCheck,
   Smartphone,
   UserRound,
@@ -20,12 +19,7 @@ import { MemberNav } from "@/components/member/member-nav";
 export function AccountClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const {
-    user,
-    ready,
-    sendEmailOtp,
-    confirmEmailOtp,
-  } = useMemberAuth();
+  const { user, ready, sendEmailOtp, confirmEmailOtp } = useMemberAuth();
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [phone, setPhone] = useState("");
@@ -46,7 +40,7 @@ export function AccountClient() {
         phone: phone.trim(),
       });
       setSent(true);
-      setMessage("驗證信已寄出，請輸入信中的驗證碼或直接點擊登入連結。");
+      setMessage("驗證碼已寄出，請至 Email 收信。");
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -70,7 +64,7 @@ export function AccountClient() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "驗證碼無效或已過期。",
+          : "驗證碼不正確或已失效。",
       );
     } finally {
       setLoading(false);
@@ -112,24 +106,18 @@ export function AccountClient() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
           <MemberCard
             href="/account/orders"
             icon={Package}
             title="我的訂單"
-            description="查看訂單內容、金額與付款狀態。"
-          />
-          <MemberCard
-            href="/account/logistics"
-            icon={Route}
-            title="我的物流"
-            description="掌握出貨、組裝與交車進度。"
+            description="查看已建立的訂單、付款狀態與金額。"
           />
           <MemberCard
             href="/account/warranty"
             icon={ShieldCheck}
             title="我的保固"
-            description="查看已登錄的商品保固資訊。"
+            description="電子保固資料預留中，正式開放後會顯示於此。"
           />
         </div>
       </div>
@@ -146,7 +134,7 @@ export function AccountClient() {
           Email 一次性驗證登入
         </h1>
         <p className="mt-3 text-sm leading-7 text-ink/50">
-          不需要設定密碼。登入後即可集中查看你的訂單、物流與保固資訊。
+          不需要設定密碼。登入後可查看你的 SlowBike 訂單與保固資料。
         </p>
 
         {!sent ? (
@@ -173,12 +161,12 @@ export function AccountClient() {
               required
               autoComplete="email"
             />
-            <SubmitButton loading={loading}>寄送登入驗證信</SubmitButton>
+            <SubmitButton loading={loading}>寄出 Email 驗證碼</SubmitButton>
           </form>
         ) : (
           <form onSubmit={handleVerifyOtp} className="mt-7 grid gap-4">
             <div className="rounded-2xl bg-olive-50 p-4 text-sm font-bold text-olive-800">
-              驗證信已寄到 {email}
+              驗證碼已寄至 {email}
             </div>
             <Input
               label="Email 驗證碼"
@@ -188,7 +176,7 @@ export function AccountClient() {
               autoComplete="one-time-code"
               required
             />
-            <SubmitButton loading={loading}>確認並登入</SubmitButton>
+            <SubmitButton loading={loading}>完成登入</SubmitButton>
             <button
               type="button"
               onClick={() => {
@@ -214,16 +202,10 @@ export function AccountClient() {
 
       <div className="rounded-[2rem] bg-sand p-7 sm:p-9">
         <Smartphone className="text-olive-700" />
-        <h2 className="mt-7 text-2xl font-black">手機登入即將推出</h2>
+        <h2 className="mt-7 text-2xl font-black">手機 OTP 架構預留</h2>
         <p className="mt-3 text-sm leading-7 text-ink/50">
-          未來可使用手機號碼接收驗證碼，更快速地登入會員中心。
+          V0 先使用 Email OTP。手機登入、LINE Login 與更完整會員功能會在後續階段開放。
         </p>
-        <div className="mt-7 rounded-2xl border border-dashed border-black/15 bg-white/60 p-5">
-          <p className="text-xs font-black tracking-[0.16em] text-ink/35">
-            COMING NEXT
-          </p>
-          <p className="mt-2 font-black">手機號碼 + SMS 驗證碼</p>
-        </div>
       </div>
     </div>
   );

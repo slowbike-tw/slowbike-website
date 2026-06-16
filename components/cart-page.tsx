@@ -2,20 +2,33 @@
 
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { getCartLineKey, useCart } from "@/components/cart-provider";
 import { ProductVisual } from "@/components/product-visual";
 import {
   formatPrice,
   getAccessoryById,
   getConfigurationPrice,
-  getProductById,
   getVariantById,
+  products as fallbackProducts,
 } from "@/lib/products";
+import type { Product } from "@/types/product";
 
 export function CartPage() {
   const { items, updateQuantity, removeItem, clearCart } = useCart();
+  const [products, setProducts] = useState<Product[]>(fallbackProducts);
+
+  useEffect(() => {
+    fetch("/api/products")
+      .then((response) => response.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) setProducts(data);
+      })
+      .catch(() => {});
+  }, []);
+
   const resolvedItems = items.flatMap((item) => {
-    const product = getProductById(item.productId);
+    const product = products.find((entry) => entry.id === item.productId);
     if (!product) return [];
     const variant = getVariantById(product, item.variantId);
     if (!variant) return [];

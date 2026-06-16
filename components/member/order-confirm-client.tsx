@@ -6,6 +6,10 @@ import { useEffect, useState } from "react";
 import { fetchOrderDraftByToken } from "@/lib/order-draft-repository";
 import type { OrderDraft } from "@/types/order-draft";
 
+function formatPrice(value: number) {
+  return `NT$${value.toLocaleString("zh-TW")}`;
+}
+
 export function OrderConfirmClient({ token }: { token: string }) {
   const [draft, setDraft] = useState<OrderDraft | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,13 +42,6 @@ export function OrderConfirmClient({ token }: { token: string }) {
     );
   }
 
-  const visibleDetails = Object.entries(draft.custom_details ?? {}).filter(
-    ([, value]) =>
-      value !== "" &&
-      value !== false &&
-      (!Array.isArray(value) || value.length > 0),
-  );
-
   return (
     <div className="rounded-[2rem] border border-black/10 bg-white p-6 sm:p-9">
       <p className="text-xs font-black tracking-[0.18em] text-olive-600">
@@ -54,7 +51,7 @@ export function OrderConfirmClient({ token }: { token: string }) {
         <div>
           <h1 className="text-3xl font-black">確認 SlowBike 訂單</h1>
           <p className="mt-2 text-sm font-bold text-ink/45">
-            {draft.business_type}｜{draft.product_summary}
+            請確認車款與金額，下一步即可選擇付款方式。
           </p>
         </div>
         <span className="rounded-full bg-sand px-4 py-2 text-xs font-black">
@@ -64,8 +61,8 @@ export function OrderConfirmClient({ token }: { token: string }) {
 
       <div className="mt-6 rounded-2xl bg-olive-50 p-5 text-sm font-bold leading-7 text-olive-900">
         <CheckCircle2 className="mb-2" />
-        此連結可直接確認訂單並付款，不需要先登入會員。付款成功後，系統會建立訂單與物流資料；之後使用同一組 Email
-        登入會員中心，就能查看我的訂單與物流。
+        此連結可直接完成付款。付款成功後，系統會建立訂單與物流資料；日後使用相同 Email
+        登入會員中心，即可查看訂單與物流進度。
       </div>
 
       <div className="mt-7 grid gap-3">
@@ -77,51 +74,18 @@ export function OrderConfirmClient({ token }: { token: string }) {
             <strong>{item.productName}</strong>
             <p className="mt-2 text-sm text-ink/50">
               {[item.specification, item.color].filter(Boolean).join(" / ")}
-              {`｜數量 ${item.quantity}`}
             </p>
-            {item.accessories && item.accessories.length > 0 && (
-              <p className="mt-2 text-xs text-ink/45">
-                加購：{item.accessories.join("、")}
-              </p>
-            )}
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <span className="font-bold text-ink/45">數量 {item.quantity}</span>
+              <strong>{formatPrice(item.unitPrice * item.quantity)}</strong>
+            </div>
           </div>
         ))}
       </div>
 
-      {visibleDetails.length > 0 && (
-        <dl className="mt-5 grid gap-3 rounded-2xl border border-black/10 p-5 sm:grid-cols-2">
-          {visibleDetails.map(([label, value]) => (
-            <div key={label}>
-              <dt className="text-xs font-bold text-ink/35">{label}</dt>
-              <dd className="mt-1 break-words text-sm font-black">
-                {Array.isArray(value)
-                  ? value.join("、")
-                  : typeof value === "boolean"
-                    ? "是"
-                    : String(value)}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      <div className="mt-6 grid gap-3 rounded-2xl bg-[#f8f7f2] p-5 text-sm sm:grid-cols-2">
-        <Info label="交車方式" value={draft.delivery_method} />
-        <Info
-          label="組裝安排"
-          value={[draft.assembly_method, draft.assembly_store]
-            .filter(Boolean)
-            .join(" / ")}
-        />
-        <Info label="收件地址" value={draft.shipping_address} />
-        <Info label="備註" value={draft.notes} />
-      </div>
-
       <div className="mt-6 flex items-end justify-between border-t border-black/10 pt-6">
-        <span className="text-sm text-ink/50">訂單金額</span>
-        <strong className="text-2xl">
-          NT${draft.total.toLocaleString("zh-TW")}
-        </strong>
+        <span className="text-sm text-ink/50">付款金額</span>
+        <strong className="text-2xl">{formatPrice(draft.total)}</strong>
       </div>
 
       <Link
@@ -130,15 +94,6 @@ export function OrderConfirmClient({ token }: { token: string }) {
       >
         前往付款
       </Link>
-    </div>
-  );
-}
-
-function Info({ label, value }: { label: string; value?: string }) {
-  return (
-    <div>
-      <span className="block text-xs font-bold text-ink/35">{label}</span>
-      <strong className="mt-1 block">{value || "未填寫"}</strong>
     </div>
   );
 }

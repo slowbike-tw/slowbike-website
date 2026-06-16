@@ -1,12 +1,13 @@
-import { products } from "@/lib/products";
+import { getStoreProducts } from "@/lib/product-cms";
 import { serviceRest } from "@/lib/supabase-server";
 import type { CartItem } from "@/types/product";
 import type { DraftItem, OrderBusinessType } from "@/types/order-draft";
 
-export function resolveCartItems(items: CartItem[]): {
+export async function resolveCartItems(items: CartItem[]): Promise<{
   items: DraftItem[];
   subtotal: number;
-} {
+}> {
+  const products = await getStoreProducts();
   const resolved = items.map((item) => {
     const product = products.find((entry) => entry.id === item.productId);
     const variant = product?.variants.find((entry) => entry.id === item.variantId && entry.enabled);

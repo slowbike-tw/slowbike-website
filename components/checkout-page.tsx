@@ -145,7 +145,7 @@ export function CheckoutPage() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!draftToken && !session) return;
-    if (deliveryMethod === "宅配到府" && !address.trim()) {
+    if (!draftToken && deliveryMethod === "宅配到府" && !address.trim()) {
       setError("宅配到府請填寫收件地址。");
       return;
     }
@@ -228,60 +228,92 @@ export function CheckoutPage() {
         SECURE CHECKOUT
       </p>
       <h1 className="mt-3 text-4xl font-black">確認訂單與付款</h1>
-      {draftToken && (
-        <p className="mt-3 text-sm font-bold text-ink/50">
-          此付款連結可直接完成付款；首次登入會員中心時，再用 Email OTP
-          驗證即可查看訂單與物流。
-        </p>
-      )}
 
       <form
         onSubmit={submit}
         className="mt-9 grid gap-7 lg:grid-cols-[1fr_380px]"
       >
         <div className="grid gap-6">
-          <Panel title="收件資料">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="收件人姓名" value={name} setValue={setName} required />
-              <Field label="收件人電話" value={phone} setValue={setPhone} required />
-              <Field
-                label="Email"
-                value={email}
-                setValue={setEmail}
-                type="email"
-                required
-              />
-              <Field label="LINE ID（選填）" value={lineId} setValue={setLineId} />
-            </div>
-          </Panel>
-
-          <Panel title="交車方式">
-            <div className="grid gap-3 sm:grid-cols-3">
-              {["恆春店自取", "龜山店自取", "宅配到府"].map((method) => (
-                <Choice
-                  key={method}
-                  selected={deliveryMethod === method}
-                  onClick={() => setDeliveryMethod(method)}
-                >
-                  {method}
-                  {method === "宅配到府" ? " + NT$800" : ""}
-                </Choice>
-              ))}
-            </div>
-            {deliveryMethod === "宅配到府" && (
-              <div className="mt-4">
-                <Field label="收件地址" value={address} setValue={setAddress} required />
+          {draftToken && draft ? (
+            <Panel title="訂單內容">
+              <p className="text-xs font-black tracking-[0.16em] text-olive-600">
+                {draft.draft_no}
+              </p>
+              <div className="mt-5 grid gap-3">
+                {draft.items.map((item, index) => (
+                  <div
+                    key={`${item.productName}-${index}`}
+                    className="rounded-2xl bg-sand p-5"
+                  >
+                    <strong>{item.productName}</strong>
+                    <p className="mt-2 text-sm text-ink/50">
+                      {[item.specification, item.color]
+                        .filter(Boolean)
+                        .join(" / ")}
+                    </p>
+                    <div className="mt-4 flex items-center justify-between text-sm">
+                      <span className="font-bold text-ink/45">
+                        數量 {item.quantity}
+                      </span>
+                      <strong>
+                        {formatPrice(item.unitPrice * item.quantity)}
+                      </strong>
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
-            <label className="mt-4 grid gap-2 text-sm font-bold">
-              備註
-              <textarea
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                className={`${inputClass} min-h-28 py-3`}
-              />
-            </label>
-          </Panel>
+            </Panel>
+          ) : (
+            <>
+              <Panel title="收件資料">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="收件人姓名" value={name} setValue={setName} required />
+                  <Field label="收件人電話" value={phone} setValue={setPhone} required />
+                  <Field
+                    label="Email"
+                    value={email}
+                    setValue={setEmail}
+                    type="email"
+                    required
+                  />
+                  <Field label="LINE ID（選填）" value={lineId} setValue={setLineId} />
+                </div>
+              </Panel>
+
+              <Panel title="交車方式">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {["恆春店自取", "龜山店自取", "宅配到府"].map((method) => (
+                    <Choice
+                      key={method}
+                      selected={deliveryMethod === method}
+                      onClick={() => setDeliveryMethod(method)}
+                    >
+                      {method}
+                      {method === "宅配到府" ? " + NT$800" : ""}
+                    </Choice>
+                  ))}
+                </div>
+                {deliveryMethod === "宅配到府" && (
+                  <div className="mt-4">
+                    <Field
+                      label="收件地址"
+                      value={address}
+                      setValue={setAddress}
+                      required
+                    />
+                  </div>
+                )}
+                <label className="mt-4 grid gap-2 text-sm font-bold">
+                  備註
+                  <textarea
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                    className={`${inputClass} min-h-28 py-3`}
+                  />
+                </label>
+              </Panel>
+            </>
+          )}
 
           <Panel title="付款方式">
             <div className="grid gap-3">
@@ -313,9 +345,12 @@ export function CheckoutPage() {
         </div>
 
         <aside className="h-fit rounded-[2rem] bg-ink p-7 text-white lg:sticky lg:top-28">
-          <h2 className="text-2xl font-black">訂單摘要</h2>
+          <h2 className="text-2xl font-black">付款摘要</h2>
           {draftToken && draft ? (
             <div className="mt-5 grid gap-3">
+              <p className="text-xs font-black tracking-[0.16em] text-white/45">
+                {draft.draft_no}
+              </p>
               {orderSummary.map((item, index) => (
                 <div key={`${item.productName}-${index}`} className="text-sm">
                   <div className="flex justify-between gap-3 font-black">
@@ -334,12 +369,14 @@ export function CheckoutPage() {
               購物車共有 {cartQuantity} 件商品。
             </p>
           )}
-          <p className="mt-4 text-sm text-white/55">
-            宅配到府加收 NT$800。
-          </p>
+          {!draftToken && (
+            <p className="mt-4 text-sm text-white/55">
+              宅配到府加收 NT$800。
+            </p>
+          )}
           {draftToken && displayTotal !== undefined && (
             <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-5">
-              <span className="text-sm text-white/55">應付金額</span>
+              <span className="text-sm text-white/55">付款金額</span>
               <strong className="text-2xl">{formatPrice(displayTotal)}</strong>
             </div>
           )}
