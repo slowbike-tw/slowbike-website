@@ -1,0 +1,1309 @@
+﻿diff --git a/app/api/orders/checkout/route.ts b/app/api/orders/checkout/route.ts
+index 7ae2b17..4c59a8e 100644
+--- a/app/api/orders/checkout/route.ts
++++ b/app/api/orders/checkout/route.ts
+@@ -2,27 +2,139 @@ import { NextResponse } from "next/server";
+ import { resolveCartItems } from "@/lib/commerce";
+ import { getServerAuthUser, serviceRest } from "@/lib/supabase-server";
+ import type { CommerceOrder } from "@/types/commerce";
+-import type { OrderDraft } from "@/types/order-draft";
++import type { MemberProfile, OrderDraft } from "@/types/order-draft";
+ import type { CartItem } from "@/types/product";
+ 
++type AuthUser = Awaited<ReturnType<typeof getServerAuthUser>>;
++
++type CheckoutBody = {
++  cartItems?: CartItem[];
++  draftToken?: string;
++  customer: {
++    name: string;
++    phone: string;
++    email: string;
++    lineId?: string;
++    address?: string;
++  };
++  deliveryMethod: string;
++  note?: string;
++  paymentMethod: CommerceOrder["payment_method"];
++};
++
+ function bearer(request: Request) {
+   return request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
+ }
+ 
++function orderNo() {
++  const now = Date.now();
++  return `SB${new Date().toISOString().slice(0, 10).replaceAll("-", "")}${String(now).slice(-6)}`;
++}
++
++function customerFromDraft(draft: OrderDraft, body: CheckoutBody) {
++  return {
++    name: body.customer?.name || draft.customer_name || "",
++    phone: body.customer?.phone || draft.customer_phone || "",
++    email: body.customer?.email || draft.customer_email || "",
++    lineId: body.customer?.lineId || draft.line_id || "",
++    address: body.customer?.address || draft.shipping_address || "",
++  };
++}
++
++async function getOptionalUser(accessToken: string) {
++  if (!accessToken) return null;
++  try {
++    return await getServerAuthUser(accessToken);
++  } catch {
++    return null;
++  }
++}
++
++async function findProfileByEmail(email: string) {
++  if (!email) return [];
++  return serviceRest<MemberProfile[]>(
++    `member_profiles?email=ilike.${encodeURIComponent(email)}&select=*&limit=1`,
++  );
++}
++
++async function findProfileByPhone(phone: string) {
++  if (!phone) return [];
++  return serviceRest<MemberProfile[]>(
++    `member_profiles?phone=eq.${encodeURIComponent(phone)}&select=*&limit=1`,
++  );
++}
++
++async function ensureMemberProfile({
++  user,
++  draft,
++  customer,
++}: {
++  user: AuthUser | null;
++  draft: OrderDraft | null;
++  customer: ReturnType<typeof customerFromDraft>;
++}) {
++  let profiles: MemberProfile[] = [];
++
++  if (user) {
++    profiles = await serviceRest<MemberProfile[]>(
++      `member_profiles?auth_user_id=eq.${user.id}&select=*&limit=1`,
++    );
++  }
++
++  if (!profiles[0] && draft?.member_profile_id) {
++    profiles = await serviceRest<MemberProfile[]>(
++      `member_profiles?id=eq.${draft.member_profile_id}&select=*&limit=1`,
++    );
++  }
++
++  if (!profiles[0]) profiles = await findProfileByEmail(customer.email);
++  if (!profiles[0]) profiles = await findProfileByPhone(customer.phone);
++
++  if (profiles[0]) {
++    const shouldBindAuth = user && !profiles[0].auth_user_id;
++    if (shouldBindAuth) {
++      const rows = await serviceRest<MemberProfile[]>(
++        `member_profiles?id=eq.${profiles[0].id}`,
++        {
++          method: "PATCH",
++          headers: { Prefer: "return=representation" },
++          body: JSON.stringify({
++            auth_user_id: user.id,
++            name: customer.name,
++            phone: customer.phone,
++            email: customer.email,
++            line_id: customer.lineId,
++            updated_at: new Date().toISOString(),
++          }),
++        },
++      );
++      return rows[0];
++    }
++    return profiles[0];
++  }
++
++  const rows = await serviceRest<MemberProfile[]>("member_profiles", {
++    method: "POST",
++    headers: { Prefer: "return=representation" },
++    body: JSON.stringify({
++      auth_user_id: user?.id ?? null,
++      name: customer.name,
++      phone: customer.phone,
++      email: customer.email,
++      line_id: customer.lineId,
++    }),
++  });
++  return rows[0] ?? null;
++}
++
+ export async function POST(request: Request) {
+   try {
+     const accessToken = bearer(request);
+-    const user = await getServerAuthUser(accessToken);
+-    const body = (await request.json()) as {
+-      cartItems?: CartItem[];
+-      draftToken?: string;
+-      customer: { name: string; phone: string; email: string; lineId?: string; address?: string };
+-      deliveryMethod: string;
+-      deliveryFee: number;
+-      note?: string;
+-      paymentMethod: CommerceOrder["payment_method"];
+-    };
++    const user = await getOptionalUser(accessToken);
++    const body = (await request.json()) as CheckoutBody;
++    const draftToken = body.draftToken?.trim();
+ 
++    let draft: OrderDraft | null = null;
+     let items;
+     let subtotal;
+     let businessType: CommerceOrder["business_type"] = "標準車款";
+@@ -30,149 +142,147 @@ export async function POST(request: Request) {
+     let source = "官網訂單";
+     let createdBy = "官網";
+     let responsibleStore = "";
++    let customer = {
++      name: body.customer?.name ?? "",
++      phone: body.customer?.phone ?? "",
++      email: body.customer?.email ?? "",
++      lineId: body.customer?.lineId ?? "",
++      address: body.customer?.address ?? "",
++    };
+ 
+-    if (body.draftToken) {
++    if (draftToken) {
+       const drafts = await serviceRest<OrderDraft[]>(
+-        `order_drafts?confirmation_token=eq.${encodeURIComponent(body.draftToken)}&auth_user_id=eq.${user.id}&select=*`,
++        `order_drafts?confirmation_token=eq.${encodeURIComponent(draftToken)}&select=*&limit=1`,
+       );
+-      const draft = drafts[0];
+-      if (!draft) throw new Error("找不到已綁定會員的訂單草稿");
++      draft = drafts[0] ?? null;
++      if (!draft || draft.status === "cancelled") {
++        throw new Error("找不到可付款的訂單草稿。");
++      }
++      if (draft.status === "paid") {
++        throw new Error("此訂單已完成付款。");
++      }
++      if (draft.auth_user_id && user && draft.auth_user_id !== user.id) {
++        throw new Error("此訂單已綁定其他會員。");
++      }
++
++      customer = customerFromDraft(draft, body);
+       items = draft.items;
+       subtotal = draft.total;
+       businessType = draft.business_type;
+       sourceDraftId = draft.id;
+-      source = draft.order_source;
++      source = draft.order_source || "後台人工";
+       createdBy = draft.created_by;
+       responsibleStore = draft.responsible_store;
+     } else {
++      if (!user) throw new Error("請先登入會員再進行官網結帳。");
+       const resolved = resolveCartItems(body.cartItems ?? []);
+       items = resolved.items;
+       subtotal = resolved.subtotal;
+     }
+ 
++    const memberProfile = await ensureMemberProfile({ user, draft, customer });
+     const deliveryFee = body.deliveryMethod === "宅配到府" ? 800 : 0;
+     const total = subtotal + deliveryFee;
+-    const now = Date.now();
+-    const orderNo = `SB${new Date().toISOString().slice(0, 10).replaceAll("-", "")}${String(now).slice(-6)}`;
+-    let memberRows = await serviceRest<Array<{ id: string; auth_user_id: string | null }>>(
+-      `member_profiles?auth_user_id=eq.${user.id}&select=id&limit=1`,
+-    );
+-    if (!memberRows[0] && user.email) {
+-      memberRows = await serviceRest<Array<{ id: string; auth_user_id: string | null }>>(
+-        `member_profiles?email=ilike.${encodeURIComponent(user.email)}&select=id,auth_user_id&limit=1`,
+-      );
+-    }
+-    if (memberRows[0] && !memberRows[0].auth_user_id) {
+-      memberRows = await serviceRest<Array<{ id: string; auth_user_id: string | null }>>(
+-        `member_profiles?id=eq.${memberRows[0].id}`,
+-        {
+-          method: "PATCH",
+-          headers: { Prefer: "return=representation" },
+-          body: JSON.stringify({
+-            auth_user_id: user.id,
+-            name: body.customer.name,
+-            phone: body.customer.phone,
+-            email: body.customer.email,
+-            line_id: body.customer.lineId ?? "",
+-            updated_at: new Date().toISOString(),
+-          }),
+-        },
+-      );
+-    }
+-    if (!memberRows[0]) {
+-      memberRows = await serviceRest<Array<{ id: string; auth_user_id: string | null }>>(
+-        "member_profiles",
+-        {
+-          method: "POST",
+-          headers: { Prefer: "return=representation" },
+-          body: JSON.stringify({
+-            auth_user_id: user.id,
+-            name: body.customer.name,
+-            phone: body.customer.phone,
+-            email: body.customer.email,
+-            line_id: body.customer.lineId ?? "",
+-          }),
+-        },
+-      );
+-    }
+-    const orderData = {
+-        auth_user_id: user.id,
+-        member_id: memberRows[0]?.id ?? null,
+-        member_profile_id: memberRows[0]?.id ?? null,
+-        source_draft_id: sourceDraftId,
+-        customer: {
+-          name: body.customer.name,
+-          phone: body.customer.phone,
+-          email: body.customer.email,
+-          lineId: body.customer.lineId ?? "",
+-          address: body.customer.address ?? "",
+-        },
+-        customer_name: body.customer.name,
+-        customer_phone: body.customer.phone,
+-        customer_email: body.customer.email,
+-        line_id: body.customer.lineId ?? "",
+-        order_source: source,
+-        business_type: businessType,
+-        items,
+-        subtotal,
+-        shipping_fee: deliveryFee,
+-        total,
+-        total_amount: total,
+-        currency: "TWD",
+-        delivery_method: body.deliveryMethod,
+-        delivery_fee: deliveryFee,
+-        address: body.customer.address ?? "",
+-        notes: body.note ?? "",
+-        note: body.note ?? "",
+-        payment_method: body.paymentMethod,
+-        payment_status: body.paymentMethod === "atm" ? "awaiting_transfer" : "pending",
+-        order_status: body.paymentMethod === "atm" ? "awaiting_transfer" : "pending_payment",
+-        checkout_token: crypto.randomUUID(),
+-        created_by: createdBy,
+-        responsible_store: responsibleStore,
+-        updated_at: new Date().toISOString(),
++    const paymentStatus =
++      body.paymentMethod === "atm" ? "awaiting_transfer" : "pending";
++    const orderStatus =
++      body.paymentMethod === "atm" ? "awaiting_transfer" : "pending_payment";
++
++    const baseOrderData = {
++      auth_user_id: user?.id ?? null,
++      member_id: memberProfile?.id ?? null,
++      member_profile_id: memberProfile?.id ?? null,
++      source_draft_id: sourceDraftId,
++      customer: {
++        name: customer.name,
++        phone: customer.phone,
++        email: customer.email,
++        lineId: customer.lineId,
++        address: customer.address,
++      },
++      customer_name: customer.name,
++      customer_phone: customer.phone,
++      customer_email: customer.email,
++      line_id: customer.lineId,
++      order_source: source,
++      business_type: businessType,
++      items,
++      subtotal,
++      shipping_fee: deliveryFee,
++      total,
++      total_amount: total,
++      currency: "TWD",
++      delivery_method: body.deliveryMethod,
++      delivery_fee: deliveryFee,
++      address: customer.address,
++      notes: body.note ?? "",
++      note: body.note ?? "",
++      payment_method: body.paymentMethod,
++      payment_status: paymentStatus,
++      order_status: orderStatus,
++      checkout_token: crypto.randomUUID(),
++      created_by: createdBy,
++      responsible_store: responsibleStore,
++      updated_at: new Date().toISOString(),
+     };
+ 
+     let rows: CommerceOrder[];
+     if (sourceDraftId) {
+       const existing = await serviceRest<CommerceOrder[]>(
+-        `customer_orders?source_draft_id=eq.${sourceDraftId}&auth_user_id=eq.${user.id}&select=*&limit=1`,
++        `customer_orders?source_draft_id=eq.${sourceDraftId}&select=*&limit=1`,
+       );
+       if (existing[0]?.payment_status === "paid") {
+-        throw new Error("此訂單已完成付款");
++        throw new Error("此訂單已完成付款。");
+       }
++
++      const orderData = {
++        ...baseOrderData,
++        auth_user_id: user?.id ?? existing[0]?.auth_user_id ?? null,
++        member_id: memberProfile?.id ?? existing[0]?.member_id ?? null,
++        member_profile_id: memberProfile?.id ?? existing[0]?.member_id ?? null,
++      };
++
+       rows = existing[0]
+-        ? await serviceRest<CommerceOrder[]>(
+-            `customer_orders?id=eq.${existing[0].id}`,
+-            {
+-              method: "PATCH",
+-              headers: { Prefer: "return=representation" },
+-              body: JSON.stringify(orderData),
+-            },
+-          )
++        ? await serviceRest<CommerceOrder[]>(`customer_orders?id=eq.${existing[0].id}`, {
++            method: "PATCH",
++            headers: { Prefer: "return=representation" },
++            body: JSON.stringify(orderData),
++          })
+         : await serviceRest<CommerceOrder[]>("customer_orders", {
+             method: "POST",
+             headers: { Prefer: "return=representation" },
+-            body: JSON.stringify({ ...orderData, order_no: orderNo }),
++            body: JSON.stringify({ ...orderData, order_no: orderNo() }),
+           });
+     } else {
+       rows = await serviceRest<CommerceOrder[]>("customer_orders", {
+         method: "POST",
+         headers: { Prefer: "return=representation" },
+-        body: JSON.stringify({ ...orderData, order_no: orderNo }),
++        body: JSON.stringify({ ...baseOrderData, order_no: orderNo() }),
+       });
+     }
+ 
+     if (sourceDraftId) {
+       await serviceRest(`order_drafts?id=eq.${sourceDraftId}`, {
+         method: "PATCH",
+-        body: JSON.stringify({ status: "awaiting_payment", payment_status: "pending" }),
++        body: JSON.stringify({
++          status: "awaiting_payment",
++          payment_status: paymentStatus,
++          auth_user_id: user?.id ?? draft?.auth_user_id ?? null,
++          member_profile_id: memberProfile?.id ?? draft?.member_profile_id ?? null,
++          updated_at: new Date().toISOString(),
++        }),
+       });
+     }
++
+     return NextResponse.json(rows[0]);
+   } catch (error) {
+     return NextResponse.json(
+-      { error: error instanceof Error ? error.message : "建立訂單失敗" },
++      {
++        error:
++          error instanceof Error
++            ? error.message
++            : "建立訂單失敗，請稍後再試。",
++      },
+       { status: 400 },
+     );
+   }
+diff --git a/app/api/payments/newebpay/route.ts b/app/api/payments/newebpay/route.ts
+index f568a8b..60c6c4a 100644
+--- a/app/api/payments/newebpay/route.ts
++++ b/app/api/payments/newebpay/route.ts
+@@ -3,17 +3,45 @@ import { createNewebpayFields, newebpayGateway } from "@/lib/newebpay";
+ import { getServerAuthUser, serviceRest } from "@/lib/supabase-server";
+ import type { CommerceOrder } from "@/types/commerce";
+ 
+-export async function POST(request: Request) {
+-  try {
+-    const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
++type PaymentRequestBody = {
++  orderId: string;
++  checkoutToken?: string;
++};
++
++function bearer(request: Request) {
++  return request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
++}
++
++async function getOrderForPayment(request: Request, body: PaymentRequestBody) {
++  const token = bearer(request);
++  if (token) {
+     const user = await getServerAuthUser(token);
+-    const { orderId } = (await request.json()) as { orderId: string };
+     const rows = await serviceRest<CommerceOrder[]>(
+-      `customer_orders?id=eq.${encodeURIComponent(orderId)}&auth_user_id=eq.${user.id}&select=*`,
++      `customer_orders?id=eq.${encodeURIComponent(body.orderId)}&auth_user_id=eq.${user.id}&select=*`,
+     );
+-    const order = rows[0];
+-    if (!order || order.payment_method === "atm") throw new Error("訂單或付款方式無效");
+-    if (order.payment_status === "paid") throw new Error("此訂單已付款");
++    return rows[0] ?? null;
++  }
++
++  if (!body.checkoutToken) {
++    throw new Error("付款連結已失效，請重新開啟付款連結。");
++  }
++
++  const rows = await serviceRest<CommerceOrder[]>(
++    `customer_orders?id=eq.${encodeURIComponent(body.orderId)}&checkout_token=eq.${encodeURIComponent(body.checkoutToken)}&select=*`,
++  );
++  return rows[0] ?? null;
++}
++
++export async function POST(request: Request) {
++  try {
++    const body = (await request.json()) as PaymentRequestBody;
++    const order = await getOrderForPayment(request, body);
++    if (!order || order.payment_method === "atm") {
++      throw new Error("找不到可付款的信用卡訂單。");
++    }
++    if (order.payment_status === "paid") {
++      throw new Error("此訂單已完成付款。");
++    }
+ 
+     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
+     const installment = order.payment_method.replace("credit-", "");
+@@ -24,7 +52,10 @@ export async function POST(request: Request) {
+       Version: "2.0",
+       MerchantOrderNo: order.order_no,
+       Amt: order.total_amount,
+-      ItemDesc: order.items.map((item) => item.productName).join("、").slice(0, 50),
++      ItemDesc: order.items
++        .map((item) => item.productName)
++        .join("、")
++        .slice(0, 50),
+       Email: order.customer_email,
+       LoginType: 0,
+       CREDIT: 1,
+@@ -40,7 +71,12 @@ export async function POST(request: Request) {
+     });
+   } catch (error) {
+     return NextResponse.json(
+-      { error: error instanceof Error ? error.message : "無法建立藍新付款請求" },
++      {
++        error:
++          error instanceof Error
++            ? error.message
++            : "建立信用卡付款請求失敗。",
++      },
+       { status: 400 },
+     );
+   }
+diff --git a/components/checkout-page.tsx b/components/checkout-page.tsx
+index 9bc7ba7..00bfa2e 100644
+--- a/components/checkout-page.tsx
++++ b/components/checkout-page.tsx
+@@ -2,12 +2,30 @@
+ 
+ import { CreditCard, Landmark, LoaderCircle } from "lucide-react";
+ import { useRouter, useSearchParams } from "next/navigation";
+-import { useEffect, useState } from "react";
++import { useEffect, useMemo, useState } from "react";
+ import { useCart } from "@/components/cart-provider";
+ import { useMemberAuth } from "@/components/member/auth-provider";
+-import type { CheckoutPaymentMethod, CommerceOrder, PaymentSettings } from "@/types/commerce";
++import { fetchOrderDraftByToken } from "@/lib/order-draft-repository";
++import type {
++  CheckoutPaymentMethod,
++  CommerceOrder,
++  PaymentSettings,
++} from "@/types/commerce";
++import type { OrderDraft } from "@/types/order-draft";
+ 
+-const inputClass = "min-h-12 w-full rounded-xl border border-black/10 bg-white px-4 text-base outline-none focus:border-olive-600";
++const inputClass =
++  "min-h-12 w-full rounded-xl border border-black/10 bg-white px-4 text-base outline-none focus:border-olive-600";
++
++function toCheckoutDeliveryMethod(method?: string) {
++  if (!method) return "恆春店自取";
++  if (method.includes("宅配")) return "宅配到府";
++  if (method.includes("龜山")) return "龜山店自取";
++  return "恆春店自取";
++}
++
++function formatPrice(value: number) {
++  return `NT$${value.toLocaleString("zh-TW")}`;
++}
+ 
+ export function CheckoutPage() {
+   const router = useRouter();
+@@ -15,6 +33,9 @@ export function CheckoutPage() {
+   const draftToken = search.get("draft") ?? "";
+   const { user, session, ready } = useMemberAuth();
+   const { items, clearCart } = useCart();
++  const [draft, setDraft] = useState<OrderDraft | null>(null);
++  const [draftLoading, setDraftLoading] = useState(false);
++  const [draftError, setDraftError] = useState("");
+   const [name, setName] = useState("");
+   const [phone, setPhone] = useState("");
+   const [email, setEmail] = useState("");
+@@ -22,41 +43,122 @@ export function CheckoutPage() {
+   const [deliveryMethod, setDeliveryMethod] = useState("恆春店自取");
+   const [address, setAddress] = useState("");
+   const [note, setNote] = useState("");
+-  const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>("credit");
++  const [paymentMethod, setPaymentMethod] =
++    useState<CheckoutPaymentMethod>("credit");
+   const [bank, setBank] = useState<PaymentSettings | null>(null);
+   const [loading, setLoading] = useState(false);
+   const [error, setError] = useState("");
+ 
+   useEffect(() => {
+-    if (!user) return;
+-    setName(user.user_metadata?.display_name ?? "");
+-    setPhone(user.user_metadata?.phone ?? user.phone ?? "");
+-    setEmail(user.email ?? "");
+-  }, [user]);
++    if (!draftToken && user) {
++      setName(user.user_metadata?.display_name ?? "");
++      setPhone(user.user_metadata?.phone ?? user.phone ?? "");
++      setEmail(user.email ?? "");
++    }
++  }, [draftToken, user]);
++
++  useEffect(() => {
++    if (!draftToken) return;
++    setDraftLoading(true);
++    setDraftError("");
++    fetchOrderDraftByToken(draftToken)
++      .then((rows) => {
++        const nextDraft = rows[0] ?? null;
++        setDraft(nextDraft);
++        if (!nextDraft) {
++          setDraftError("找不到這筆付款連結，請聯繫 SlowBike 協助確認。");
++          return;
++        }
++        setName(nextDraft.customer_name ?? "");
++        setPhone(nextDraft.customer_phone ?? "");
++        setEmail(nextDraft.customer_email ?? "");
++        setLineId(nextDraft.line_id ?? "");
++        setDeliveryMethod(toCheckoutDeliveryMethod(nextDraft.delivery_method));
++        setAddress(nextDraft.shipping_address ?? "");
++        setNote(nextDraft.notes ?? "");
++      })
++      .catch(() => {
++        setDraftError("付款連結讀取失敗，請稍後再試或聯繫 SlowBike。");
++      })
++      .finally(() => setDraftLoading(false));
++  }, [draftToken]);
++
+   useEffect(() => {
+-    fetch("/api/settings/payment").then((response) => response.json()).then(setBank).catch(() => {});
++    fetch("/api/settings/payment")
++      .then((response) => response.json())
++      .then(setBank)
++      .catch(() => {});
+   }, []);
+ 
+-  if (!ready) return <div className="grid min-h-72 place-items-center"><LoaderCircle className="animate-spin" /></div>;
+-  if (!user || !session) {
+-    const next = `/checkout${draftToken ? `?draft=${encodeURIComponent(draftToken)}` : ""}`;
+-    router.replace(`/account?next=${encodeURIComponent(next)}`);
+-    return <div className="grid min-h-72 place-items-center font-bold">正在前往會員登入...</div>;
++  const cartQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
++  const draftSubtotal = draft?.total ?? 0;
++  const deliveryFee = deliveryMethod === "宅配到府" ? 800 : 0;
++  const displayTotal = draftToken ? draftSubtotal + deliveryFee : undefined;
++
++  const paymentMethods: Array<[CheckoutPaymentMethod, string]> = [
++    ["credit", "信用卡一次付清"],
++    ["credit-3", "信用卡 3 期零利率"],
++    ["credit-6", "信用卡 6 期零利率"],
++    ["credit-12", "信用卡 12 期零利率"],
++    ["atm", "ATM 轉帳"],
++  ];
++
++  const orderSummary = useMemo(() => {
++    if (draftToken && draft) return draft.items;
++    return [];
++  }, [draft, draftToken]);
++
++  if (!ready || draftLoading) {
++    return (
++      <div className="grid min-h-72 place-items-center">
++        <LoaderCircle className="animate-spin text-olive-700" />
++      </div>
++    );
+   }
++
++  if (!draftToken && (!user || !session)) {
++    router.replace(`/account?next=${encodeURIComponent("/checkout")}`);
++    return (
++      <div className="grid min-h-72 place-items-center font-bold">
++        正在前往會員登入...
++      </div>
++    );
++  }
++
+   if (!draftToken && items.length === 0) {
+-    return <div className="mx-auto max-w-xl px-5 py-24 text-center"><h1 className="text-3xl font-black">購物車目前沒有商品</h1></div>;
++    return (
++      <div className="mx-auto max-w-xl px-5 py-24 text-center">
++        <h1 className="text-3xl font-black">購物車目前是空的</h1>
++      </div>
++    );
++  }
++
++  if (draftToken && draftError) {
++    return (
++      <div className="mx-auto max-w-xl px-5 py-24 text-center">
++        <h1 className="text-3xl font-black">付款連結無法使用</h1>
++        <p className="mt-4 text-sm leading-7 text-ink/55">{draftError}</p>
++      </div>
++    );
+   }
+ 
+   async function submit(event: React.FormEvent) {
+     event.preventDefault();
+-    if (!session) return;
+-    if (deliveryMethod === "宅配到府" && !address.trim()) return setError("宅配到府請填寫收件地址");
++    if (!draftToken && !session) return;
++    if (deliveryMethod === "宅配到府" && !address.trim()) {
++      setError("宅配到府請填寫收件地址。");
++      return;
++    }
++
+     setLoading(true);
+     setError("");
+     try {
++      const authHeaders: Record<string, string> = session
++        ? { Authorization: `Bearer ${session.access_token}` }
++        : {};
+       const response = await fetch("/api/orders/checkout", {
+         method: "POST",
+-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
++        headers: { "Content-Type": "application/json", ...authHeaders },
+         body: JSON.stringify({
+           cartItems: items,
+           draftToken: draftToken || undefined,
+@@ -66,17 +168,38 @@ export function CheckoutPage() {
+           paymentMethod,
+         }),
+       });
+-      const order = await response.json() as CommerceOrder & { error?: string };
+-      if (!response.ok) throw new Error(order.error || "建立訂單失敗");
++      const order = (await response.json()) as CommerceOrder & {
++        error?: string;
++      };
++      if (!response.ok) {
++        throw new Error(order.error || "建立訂單失敗，請稍後再試。");
++      }
++
+       if (!draftToken) clearCart();
+-      if (paymentMethod === "atm") return router.push(`/checkout/payment/atm?order=${encodeURIComponent(order.order_no)}`);
++      if (paymentMethod === "atm") {
++        router.push(
++          `/checkout/payment/atm?order=${encodeURIComponent(order.order_no)}`,
++        );
++        return;
++      }
++
+       const paymentResponse = await fetch("/api/payments/newebpay", {
+         method: "POST",
+-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+-        body: JSON.stringify({ orderId: order.id }),
++        headers: { "Content-Type": "application/json", ...authHeaders },
++        body: JSON.stringify({
++          orderId: order.id,
++          checkoutToken: order.checkout_token,
++        }),
+       });
+-      const payment = await paymentResponse.json() as { action?: string; fields?: Record<string, string>; error?: string };
+-      if (!paymentResponse.ok || !payment.action || !payment.fields) throw new Error(payment.error || "無法建立付款請求");
++      const payment = (await paymentResponse.json()) as {
++        action?: string;
++        fields?: Record<string, string>;
++        error?: string;
++      };
++      if (!paymentResponse.ok || !payment.action || !payment.fields) {
++        throw new Error(payment.error || "建立付款請求失敗，請稍後再試。");
++      }
++
+       const form = document.createElement("form");
+       form.method = "POST";
+       form.action = payment.action;
+@@ -90,46 +213,146 @@ export function CheckoutPage() {
+       document.body.appendChild(form);
+       form.submit();
+     } catch (requestError) {
+-      setError(requestError instanceof Error ? requestError.message : "結帳失敗");
++      setError(
++        requestError instanceof Error
++          ? requestError.message
++          : "送出訂單時發生錯誤。",
++      );
+       setLoading(false);
+     }
+   }
+ 
+-  const methods: Array<[CheckoutPaymentMethod, string]> = [
+-    ["credit", "信用卡一次付清"],
+-    ["credit-3", "信用卡 3 期零利率"],
+-    ["credit-6", "信用卡 6 期零利率"],
+-    ["credit-12", "信用卡 12 期零利率"],
+-    ["atm", "ATM 轉帳"],
+-  ];
+-
+   return (
+     <section className="mx-auto max-w-6xl px-5 py-14 lg:py-20">
+-      <p className="text-xs font-black tracking-[0.2em] text-olive-600">SECURE CHECKOUT</p>
+-      <h1 className="mt-3 text-4xl font-black">確認收件與付款資料</h1>
+-      <form onSubmit={submit} className="mt-9 grid gap-7 lg:grid-cols-[1fr_380px]">
++      <p className="text-xs font-black tracking-[0.2em] text-olive-600">
++        SECURE CHECKOUT
++      </p>
++      <h1 className="mt-3 text-4xl font-black">確認訂單與付款</h1>
++      {draftToken && (
++        <p className="mt-3 text-sm font-bold text-ink/50">
++          此付款連結可直接完成付款；首次登入會員中心時，再用 Email OTP
++          驗證即可查看訂單與物流。
++        </p>
++      )}
++
++      <form
++        onSubmit={submit}
++        className="mt-9 grid gap-7 lg:grid-cols-[1fr_380px]"
++      >
+         <div className="grid gap-6">
+-          <Panel title="收件資料"><div className="grid gap-4 sm:grid-cols-2">
+-            <Field label="收件人姓名" value={name} setValue={setName} required />
+-            <Field label="收件人電話" value={phone} setValue={setPhone} required />
+-            <Field label="Email" value={email} setValue={setEmail} type="email" required />
+-            <Field label="LINE ID（選填）" value={lineId} setValue={setLineId} />
+-          </div></Panel>
++          <Panel title="收件資料">
++            <div className="grid gap-4 sm:grid-cols-2">
++              <Field label="收件人姓名" value={name} setValue={setName} required />
++              <Field label="收件人電話" value={phone} setValue={setPhone} required />
++              <Field
++                label="Email"
++                value={email}
++                setValue={setEmail}
++                type="email"
++                required
++              />
++              <Field label="LINE ID（選填）" value={lineId} setValue={setLineId} />
++            </div>
++          </Panel>
++
+           <Panel title="交車方式">
+-            <div className="grid gap-3 sm:grid-cols-3">{["恆春店自取", "龜山店自取", "宅配到府"].map((method) => <Choice key={method} selected={deliveryMethod === method} onClick={() => setDeliveryMethod(method)}>{method}{method === "宅配到府" ? " + NT$800" : ""}</Choice>)}</div>
+-            {deliveryMethod === "宅配到府" && <div className="mt-4"><Field label="收件地址" value={address} setValue={setAddress} required /></div>}
+-            <label className="mt-4 grid gap-2 text-sm font-bold">備註<textarea value={note} onChange={(event) => setNote(event.target.value)} className={`${inputClass} min-h-28 py-3`} /></label>
++            <div className="grid gap-3 sm:grid-cols-3">
++              {["恆春店自取", "龜山店自取", "宅配到府"].map((method) => (
++                <Choice
++                  key={method}
++                  selected={deliveryMethod === method}
++                  onClick={() => setDeliveryMethod(method)}
++                >
++                  {method}
++                  {method === "宅配到府" ? " + NT$800" : ""}
++                </Choice>
++              ))}
++            </div>
++            {deliveryMethod === "宅配到府" && (
++              <div className="mt-4">
++                <Field label="收件地址" value={address} setValue={setAddress} required />
++              </div>
++            )}
++            <label className="mt-4 grid gap-2 text-sm font-bold">
++              備註
++              <textarea
++                value={note}
++                onChange={(event) => setNote(event.target.value)}
++                className={`${inputClass} min-h-28 py-3`}
++              />
++            </label>
+           </Panel>
++
+           <Panel title="付款方式">
+-            <div className="grid gap-3">{methods.map(([value, label]) => <Choice key={value} selected={paymentMethod === value} onClick={() => setPaymentMethod(value)}><span className="flex items-center gap-3">{value === "atm" ? <Landmark size={18} /> : <CreditCard size={18} />}{label}</span></Choice>)}</div>
+-            {paymentMethod === "atm" && <div className="mt-4 rounded-2xl bg-sand p-4 text-sm leading-7">{bank?.account_number ? `${bank.bank_name}（${bank.bank_code}）｜戶名：${bank.account_name}｜帳號：${bank.account_number}` : "ATM 收款帳戶尚未由管理員設定。"}</div>}
++            <div className="grid gap-3">
++              {paymentMethods.map(([value, label]) => (
++                <Choice
++                  key={value}
++                  selected={paymentMethod === value}
++                  onClick={() => setPaymentMethod(value)}
++                >
++                  <span className="flex items-center gap-3">
++                    {value === "atm" ? (
++                      <Landmark size={18} />
++                    ) : (
++                      <CreditCard size={18} />
++                    )}
++                    {label}
++                  </span>
++                </Choice>
++              ))}
++            </div>
++            {paymentMethod === "atm" && (
++              <div className="mt-4 rounded-2xl bg-sand p-4 text-sm leading-7">
++                {bank?.account_number
++                  ? `${bank.bank_name}（${bank.bank_code}）｜戶名：${bank.account_name}｜帳號：${bank.account_number}`
++                  : "ATM 收款帳戶尚未設定，請先聯繫 SlowBike。"}
++              </div>
++            )}
+           </Panel>
+         </div>
++
+         <aside className="h-fit rounded-[2rem] bg-ink p-7 text-white lg:sticky lg:top-28">
+           <h2 className="text-2xl font-black">訂單摘要</h2>
+-          <p className="mt-4 text-sm leading-7 text-white/55">{draftToken ? "金額依後台訂單草稿計算。" : `購物車共 ${items.reduce((sum, item) => sum + item.quantity, 0)} 件商品。`}</p>
+-          <p className="mt-3 text-sm text-white/55">宅配到府將加收 NT$800。</p>
+-          <button disabled={loading || (paymentMethod === "atm" && !bank?.account_number)} className="mt-7 flex min-h-14 w-full items-center justify-center rounded-full bg-white px-5 text-sm font-black text-ink disabled:opacity-40">{loading ? "處理中..." : paymentMethod === "atm" ? "建立 ATM 轉帳訂單" : "前往藍新安全付款"}</button>
++          {draftToken && draft ? (
++            <div className="mt-5 grid gap-3">
++              {orderSummary.map((item, index) => (
++                <div key={`${item.productName}-${index}`} className="text-sm">
++                  <div className="flex justify-between gap-3 font-black">
++                    <span>{item.productName}</span>
++                    <span>{formatPrice(item.unitPrice * item.quantity)}</span>
++                  </div>
++                  <p className="mt-1 text-xs leading-5 text-white/50">
++                    {[item.specification, item.color].filter(Boolean).join(" / ")}
++                    {`｜數量 ${item.quantity}`}
++                  </p>
++                </div>
++              ))}
++            </div>
++          ) : (
++            <p className="mt-4 text-sm leading-7 text-white/55">
++              購物車共有 {cartQuantity} 件商品。
++            </p>
++          )}
++          <p className="mt-4 text-sm text-white/55">
++            宅配到府加收 NT$800。
++          </p>
++          {draftToken && displayTotal !== undefined && (
++            <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-5">
++              <span className="text-sm text-white/55">應付金額</span>
++              <strong className="text-2xl">{formatPrice(displayTotal)}</strong>
++            </div>
++          )}
++          <button
++            disabled={loading || (paymentMethod === "atm" && !bank?.account_number)}
++            className="mt-7 flex min-h-14 w-full items-center justify-center rounded-full bg-white px-5 text-sm font-black text-ink disabled:opacity-40"
++          >
++            {loading
++              ? "處理中..."
++              : paymentMethod === "atm"
++                ? "建立 ATM 轉帳訂單"
++                : "前往信用卡付款"}
++          </button>
+           {error && <p className="mt-4 text-sm font-bold text-red-300">{error}</p>}
+         </aside>
+       </form>
+@@ -137,6 +360,68 @@ export function CheckoutPage() {
+   );
+ }
+ 
+-function Panel({ title, children }: { title: string; children: React.ReactNode }) { return <section className="rounded-3xl border border-black/10 bg-white p-5 sm:p-7"><h2 className="text-xl font-black">{title}</h2><div className="mt-5">{children}</div></section>; }
+-function Field({ label, value, setValue, type = "text", required = false }: { label: string; value: string; setValue: (value: string) => void; type?: string; required?: boolean }) { return <label className="grid gap-2 text-sm font-bold">{label}<input type={type} required={required} value={value} onChange={(event) => setValue(event.target.value)} className={inputClass} /></label>; }
+-function Choice({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) { return <button type="button" onClick={onClick} className={`min-h-14 rounded-2xl border px-4 text-left text-sm font-black ${selected ? "border-olive-700 bg-olive-700 text-white" : "border-black/10 bg-white"}`}>{children}</button>; }
++function Panel({
++  title,
++  children,
++}: {
++  title: string;
++  children: React.ReactNode;
++}) {
++  return (
++    <section className="rounded-3xl border border-black/10 bg-white p-5 sm:p-7">
++      <h2 className="text-xl font-black">{title}</h2>
++      <div className="mt-5">{children}</div>
++    </section>
++  );
++}
++
++function Field({
++  label,
++  value,
++  setValue,
++  type = "text",
++  required = false,
++}: {
++  label: string;
++  value: string;
++  setValue: (value: string) => void;
++  type?: string;
++  required?: boolean;
++}) {
++  return (
++    <label className="grid gap-2 text-sm font-bold">
++      {label}
++      <input
++        type={type}
++        required={required}
++        value={value}
++        onChange={(event) => setValue(event.target.value)}
++        className={inputClass}
++      />
++    </label>
++  );
++}
++
++function Choice({
++  selected,
++  onClick,
++  children,
++}: {
++  selected: boolean;
++  onClick: () => void;
++  children: React.ReactNode;
++}) {
++  return (
++    <button
++      type="button"
++      onClick={onClick}
++      className={`min-h-14 rounded-2xl border px-4 text-left text-sm font-black ${
++        selected
++          ? "border-olive-700 bg-olive-700 text-white"
++          : "border-black/10 bg-white text-ink"
++      }`}
++    >
++      {children}
++    </button>
++  );
++}
+diff --git a/components/member/auth-provider.tsx b/components/member/auth-provider.tsx
+index 0a61489..5314d89 100644
+--- a/components/member/auth-provider.tsx
++++ b/components/member/auth-provider.tsx
+@@ -108,6 +108,16 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
+     };
+   }, []);
+ 
++  useEffect(() => {
++    if (!session?.access_token) return;
++    fetch("/api/members/claim-profile", {
++      method: "POST",
++      headers: { Authorization: `Bearer ${session.access_token}` },
++    }).catch(() => {
++      // Member profile claiming is best-effort; account pages still load normally.
++    });
++  }, [session?.access_token]);
++
+   const sendEmailOtp = useCallback(
+     async (
+       email: string,
+diff --git a/components/member/order-confirm-client.tsx b/components/member/order-confirm-client.tsx
+index 797f3eb..90aa108 100644
+--- a/components/member/order-confirm-client.tsx
++++ b/components/member/order-confirm-client.tsx
+@@ -3,63 +3,41 @@
+ import { CheckCircle2, LoaderCircle, LockKeyhole } from "lucide-react";
+ import Link from "next/link";
+ import { useEffect, useState } from "react";
+-import { useMemberAuth } from "@/components/member/auth-provider";
+-import {
+-  claimOrderDraft,
+-  fetchOrderDraftByToken,
+-} from "@/lib/order-draft-repository";
++import { fetchOrderDraftByToken } from "@/lib/order-draft-repository";
+ import type { OrderDraft } from "@/types/order-draft";
+ 
+ export function OrderConfirmClient({ token }: { token: string }) {
+-  const { user, session, ready } = useMemberAuth();
+   const [draft, setDraft] = useState<OrderDraft | null>(null);
+   const [loading, setLoading] = useState(true);
+-  const [claiming, setClaiming] = useState(false);
+   const [error, setError] = useState("");
+ 
+   useEffect(() => {
+     fetchOrderDraftByToken(token)
+       .then((rows) => setDraft(rows[0] ?? null))
+-      .catch(() => setError("確認網址無效、已過期或資料表尚未完成設定。"))
++      .catch(() =>
++        setError("付款連結讀取失敗，請稍後再試或聯繫 SlowBike。"),
++      )
+       .finally(() => setLoading(false));
+   }, [token]);
+ 
+-  if (!ready || loading) {
++  if (loading) {
+     return (
+       <div className="grid min-h-64 place-items-center">
+         <LoaderCircle className="animate-spin text-olive-700" />
+       </div>
+     );
+   }
+-  if (error) return <Message title="無法開啟訂單草稿" text={error} />;
++
++  if (error) return <Message title="無法讀取訂單" text={error} />;
+   if (!draft) {
+     return (
+       <Message
+-        title="找不到訂單草稿"
+-        text="請向 SlowBike 工作人員索取新的客戶確認網址。"
++        title="找不到這筆訂單"
++        text="請確認付款連結是否正確，或聯繫 SlowBike 協助處理。"
+       />
+     );
+   }
+ 
+-  if (!user || !session) {
+-    const returnUrl = `/checkout/draft/${token}`;
+-    return (
+-      <Message
+-        icon={LockKeyhole}
+-        title="請先登入或註冊會員"
+-        text="登入 Email 或手機必須與 SlowBike 建立草稿時填寫的聯絡資料相同，才能自動綁定這筆訂單。"
+-      >
+-        <Link
+-          href={`/account?next=${encodeURIComponent(returnUrl)}`}
+-          className="mt-6 inline-flex min-h-12 items-center rounded-full bg-ink px-6 text-sm font-black text-white"
+-        >
+-          前往 Email OTP 登入
+-        </Link>
+-      </Message>
+-    );
+-  }
+-
+-  const alreadyClaimed = draft.auth_user_id === user.id;
+   const visibleDetails = Object.entries(draft.custom_details ?? {}).filter(
+     ([, value]) =>
+       value !== "" &&
+@@ -74,16 +52,22 @@ export function OrderConfirmClient({ token }: { token: string }) {
+       </p>
+       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+         <div>
+-          <h1 className="text-3xl font-black">確認你的 SlowBike 訂單</h1>
++          <h1 className="text-3xl font-black">確認 SlowBike 訂單</h1>
+           <p className="mt-2 text-sm font-bold text-ink/45">
+-            {draft.business_type}・{draft.product_summary}
++            {draft.business_type}｜{draft.product_summary}
+           </p>
+         </div>
+         <span className="rounded-full bg-sand px-4 py-2 text-xs font-black">
+-          {alreadyClaimed ? "待付款" : "待客戶確認"}
++          待付款
+         </span>
+       </div>
+ 
++      <div className="mt-6 rounded-2xl bg-olive-50 p-5 text-sm font-bold leading-7 text-olive-900">
++        <CheckCircle2 className="mb-2" />
++        此連結可直接確認訂單並付款，不需要先登入會員。付款成功後，系統會建立訂單與物流資料；之後使用同一組 Email
++        登入會員中心，就能查看我的訂單與物流。
++      </div>
++
+       <div className="mt-7 grid gap-3">
+         {draft.items.map((item, index) => (
+           <div
+@@ -92,12 +76,12 @@ export function OrderConfirmClient({ token }: { token: string }) {
+           >
+             <strong>{item.productName}</strong>
+             <p className="mt-2 text-sm text-ink/50">
+-              {[item.specification, item.color].filter(Boolean).join("・")}
+-              {`・數量 ${item.quantity}`}
++              {[item.specification, item.color].filter(Boolean).join(" / ")}
++              {`｜數量 ${item.quantity}`}
+             </p>
+             {item.accessories && item.accessories.length > 0 && (
+               <p className="mt-2 text-xs text-ink/45">
+-                配件：{item.accessories.join("、")}
++                加購：{item.accessories.join("、")}
+               </p>
+             )}
+           </div>
+@@ -124,59 +108,28 @@ export function OrderConfirmClient({ token }: { token: string }) {
+       <div className="mt-6 grid gap-3 rounded-2xl bg-[#f8f7f2] p-5 text-sm sm:grid-cols-2">
+         <Info label="交車方式" value={draft.delivery_method} />
+         <Info
+-          label="組裝"
++          label="組裝安排"
+           value={[draft.assembly_method, draft.assembly_store]
+             .filter(Boolean)
+-            .join("・")}
++            .join(" / ")}
+         />
+         <Info label="收件地址" value={draft.shipping_address} />
+         <Info label="備註" value={draft.notes} />
+       </div>
+ 
+       <div className="mt-6 flex items-end justify-between border-t border-black/10 pt-6">
+-        <span className="text-sm text-ink/50">訂單總額</span>
++        <span className="text-sm text-ink/50">訂單金額</span>
+         <strong className="text-2xl">
+           NT${draft.total.toLocaleString("zh-TW")}
+         </strong>
+       </div>
+ 
+-      {alreadyClaimed ? (
+-        <div className="mt-7 rounded-2xl bg-olive-50 p-5 text-sm font-bold text-olive-800">
+-          <CheckCircle2 className="mb-2" />
+-          訂單已完成確認，目前狀態為待付款。
+-          <Link
+-            href={`/checkout?draft=${encodeURIComponent(token)}`}
+-            className="mt-4 flex min-h-12 items-center justify-center rounded-full bg-olive-700 px-5 text-white"
+-          >
+-            前往付款
+-          </Link>
+-        </div>
+-      ) : (
+-        <button
+-          type="button"
+-          disabled={claiming}
+-          onClick={async () => {
+-            setClaiming(true);
+-            setError("");
+-            try {
+-              const rows = await claimOrderDraft(token, session.access_token);
+-              setDraft(rows[0] ?? draft);
+-            } catch (claimError) {
+-              setError(
+-                claimError instanceof Error
+-                  ? claimError.message
+-                  : "訂單確認失敗。",
+-              );
+-            } finally {
+-              setClaiming(false);
+-            }
+-          }}
+-          className="mt-7 min-h-14 w-full rounded-full bg-olive-700 px-6 text-sm font-black text-white disabled:opacity-50"
+-        >
+-          {claiming ? "確認中..." : "確認訂單並綁定會員"}
+-        </button>
+-      )}
+-      {error && <p className="mt-4 text-sm font-bold text-red-700">{error}</p>}
++      <Link
++        href={`/checkout?draft=${encodeURIComponent(token)}`}
++        className="mt-7 flex min-h-14 w-full items-center justify-center rounded-full bg-olive-700 px-6 text-sm font-black text-white"
++      >
++        前往付款
++      </Link>
+     </div>
+   );
+ }
+@@ -185,7 +138,7 @@ function Info({ label, value }: { label: string; value?: string }) {
+   return (
+     <div>
+       <span className="block text-xs font-bold text-ink/35">{label}</span>
+-      <strong className="mt-1 block">{value || "未填"}</strong>
++      <strong className="mt-1 block">{value || "未填寫"}</strong>
+     </div>
+   );
+ }
+diff --git a/types/commerce.ts b/types/commerce.ts
+index 8b50961..1c2c1de 100644
+--- a/types/commerce.ts
++++ b/types/commerce.ts
+@@ -11,7 +11,7 @@ export type CommerceOrder = {
+   id: string;
+   order_no: string;
+   member_id: string | null;
+-  auth_user_id: string;
++  auth_user_id: string | null;
+   source_draft_id: string | null;
+   customer_name: string;
+   customer_phone: string;
+diff --git a/app/api/members/claim-profile/route.ts b/app/api/members/claim-profile/route.ts
+new file mode 100644
+index 0000000..bcd0f0f
+--- /dev/null
++++ b/app/api/members/claim-profile/route.ts
+@@ -0,0 +1,93 @@
++import { NextResponse } from "next/server";
++import { getServerAuthUser, serviceRest } from "@/lib/supabase-server";
++import type { MemberProfile } from "@/types/order-draft";
++
++function bearer(request: Request) {
++  return request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
++}
++
++async function findProfile(user: Awaited<ReturnType<typeof getServerAuthUser>>) {
++  let rows = await serviceRest<MemberProfile[]>(
++    `member_profiles?auth_user_id=eq.${user.id}&select=*&limit=1`,
++  );
++  if (rows[0]) return rows[0];
++
++  if (user.email) {
++    rows = await serviceRest<MemberProfile[]>(
++      `member_profiles?email=ilike.${encodeURIComponent(user.email)}&select=*&limit=1`,
++    );
++    if (rows[0]) return rows[0];
++  }
++
++  const phone = user.phone || user.user_metadata?.phone || "";
++  if (phone) {
++    rows = await serviceRest<MemberProfile[]>(
++      `member_profiles?phone=eq.${encodeURIComponent(phone)}&select=*&limit=1`,
++    );
++    if (rows[0]) return rows[0];
++  }
++
++  return null;
++}
++
++export async function POST(request: Request) {
++  try {
++    const token = bearer(request);
++    if (!token) throw new Error("尚未登入。");
++    const user = await getServerAuthUser(token);
++    const profile = await findProfile(user);
++    if (!profile) return NextResponse.json({ claimed: false });
++
++    const name = user.user_metadata?.display_name || profile.name || "";
++    const phone = user.user_metadata?.phone || user.phone || profile.phone || "";
++    const email = user.email || profile.email || "";
++
++    await serviceRest(`member_profiles?id=eq.${profile.id}`, {
++      method: "PATCH",
++      body: JSON.stringify({
++        auth_user_id: user.id,
++        name,
++        phone,
++        email,
++        updated_at: new Date().toISOString(),
++      }),
++    });
++
++    const patch = {
++      auth_user_id: user.id,
++      updated_at: new Date().toISOString(),
++    };
++
++    await Promise.all([
++      serviceRest(`customer_orders?member_id=eq.${profile.id}&auth_user_id=is.null`, {
++        method: "PATCH",
++        body: JSON.stringify(patch),
++      }),
++      serviceRest(
++        `customer_orders?member_profile_id=eq.${profile.id}&auth_user_id=is.null`,
++        {
++          method: "PATCH",
++          body: JSON.stringify(patch),
++        },
++      ),
++      serviceRest(`order_drafts?member_profile_id=eq.${profile.id}&auth_user_id=is.null`, {
++        method: "PATCH",
++        body: JSON.stringify(patch),
++      }),
++      serviceRest(`logistics_orders?member_id=eq.${profile.id}&auth_user_id=is.null`, {
++        method: "PATCH",
++        body: JSON.stringify(patch),
++      }),
++    ]);
++
++    return NextResponse.json({ claimed: true, memberProfileId: profile.id });
++  } catch (error) {
++    return NextResponse.json(
++      {
++        error:
++          error instanceof Error ? error.message : "會員資料綁定失敗。",
++      },
++      { status: 400 },
++    );
++  }
++}
+diff --git a/supabase/guest_checkout_v1.sql b/supabase/guest_checkout_v1.sql
+new file mode 100644
+index 0000000..e61c9d9
+--- /dev/null
++++ b/supabase/guest_checkout_v1.sql
+@@ -0,0 +1,10 @@
++-- SlowBike guest checkout for admin-created draft orders.
++-- Safe migration: no table rebuild, no data deletion, RLS remains enabled.
++
++alter table public.customer_orders
++  alter column auth_user_id drop not null;
++
++grant select, insert, update on table public.customer_orders to service_role;
++grant select, insert, update on table public.order_drafts to service_role;
++grant select, insert, update on table public.member_profiles to service_role;
++grant select, insert, update on table public.logistics_orders to service_role;

@@ -108,6 +108,16 @@ export function MemberAuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!session?.access_token) return;
+    fetch("/api/members/claim-profile", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    }).catch(() => {
+      // Member profile claiming is best-effort; account pages still load normally.
+    });
+  }, [session?.access_token]);
+
   const sendEmailOtp = useCallback(
     async (
       email: string,

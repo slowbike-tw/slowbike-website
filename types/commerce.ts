@@ -11,7 +11,7 @@ export type CommerceOrder = {
   id: string;
   order_no: string;
   member_id: string | null;
-  auth_user_id: string;
+  auth_user_id: string | null;
   source_draft_id: string | null;
   customer_name: string;
   customer_phone: string;
