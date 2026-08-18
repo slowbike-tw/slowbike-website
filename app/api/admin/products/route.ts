@@ -1,51 +1,26 @@
 import { NextResponse } from "next/server";
-import {
-  getAdminProductRecords,
-  hideProductRecord,
-  upsertProductRecord,
-  type ProductCmsPayload,
-} from "@/lib/product-cms";
-import { requireStaffUser } from "@/lib/supabase-server";
-
-function bearer(request: Request) {
-  return request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-}
-
-export async function GET(request: Request) {
-  try {
-    await requireStaffUser(bearer(request));
-    return NextResponse.json(await getAdminProductRecords());
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "無法讀取商品" },
-      { status: 400 },
-    );
-  }
-}
+import { isAdminSignedIn } from "@/lib/admin-auth";
+import { upsertProduct } from "@/lib/repositories";
+import type { ProductStatus } from "@/lib/types";
 
 export async function POST(request: Request) {
-  try {
-    await requireStaffUser(bearer(request));
-    const payload = (await request.json()) as ProductCmsPayload;
-    return NextResponse.json(await upsertProductRecord(payload));
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "商品儲存失敗" },
-      { status: 400 },
-    );
+  if (!(await isAdminSignedIn())) {
+    return NextResponse.redirect(new URL("/admin", request.url), { status: 303 });
   }
-}
-
-export async function PATCH(request: Request) {
-  try {
-    await requireStaffUser(bearer(request));
-    const payload = (await request.json()) as { id: string; action: "hide" };
-    if (payload.action !== "hide") throw new Error("不支援的操作");
-    return NextResponse.json(await hideProductRecord(payload.id));
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "商品更新失敗" },
-      { status: 400 },
-    );
-  }
+  const form = await request.formData();
+  await upsertProduct({
+    id: String(form.get("id") || "") || undefined,
+    name: String(form.get("name") || ""),
+    slug: String(form.get("slug") || ""),
+    subtitle: String(form.get("subtitle") || ""),
+    price: Number(form.get("price") || 0),
+    imagePath: String(form.get("imagePath") || ""),
+    summary: String(form.get("summary") || ""),
+    specs: String(form.get("specs") || ""),
+    highlights: String(form.get("highlights") || ""),
+    salesCopy: String(form.get("salesCopy") || ""),
+    status: String(form.get("status") || "active") as ProductStatus,
+    sortOrder: Number(form.get("sortOrder") || 1),
+  });
+  return NextResponse.redirect(new URL("/admin/products", request.url), { status: 303 });
 }

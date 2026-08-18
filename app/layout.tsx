@@ -1,27 +1,18 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { CartProvider } from "@/components/cart-provider";
-import { MemberAuthProvider } from "@/components/member/auth-provider";
-import { SiteShell } from "@/components/site-shell";
 
 export const metadata: Metadata = {
-  title: {
-    default: "SlowBike 即行｜找到適合你的電動腳踏車",
-    template: "%s｜SlowBike 即行",
+  title: "SlowBike 電動腳踏車專賣店",
+  description: "選一台真正適合你的電動車。SlowBike 提供電動腳踏車、預約試乘、售後服務與線上刷卡付款。",
+  icons: {
+    icon: "/favicon.png",
   },
-  description: "通勤、購物、外送、露營、慢生活，一台適合你的電動腳踏車。",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-Hant">
-      <body>
-        <CartProvider>
-          <MemberAuthProvider>
-            <SiteShell>{children}</SiteShell>
-          </MemberAuthProvider>
-        </CartProvider>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
