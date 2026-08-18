@@ -94,11 +94,6 @@ export default async function Home() {
             <h3>主要門店</h3>
             <div className="store-list">
               <div className="store-item">
-                <strong>SlowBike 北區店</strong>
-                <span>桃園市龜山區復興北路92號正對面</span>
-                <a href="tel:0981809935">0981-809935</a>
-              </div>
-              <div className="store-item">
                 <strong>SlowBike 恆春店</strong>
                 <span>屏東縣恆春鎮環城北路242號</span>
                 <a href="tel:088203591">08-8203591</a>
@@ -152,6 +147,11 @@ export default async function Home() {
       <footer className="site-footer">
         <img src="/images/brand/slowbike-logo-inverted.jpg" alt="SlowBike" />
         <p>SlowBike 電動腳踏車專賣店｜support@slowbike.com.tw</p>
+        <div className="company-info">
+          <p>公司名稱：初五娛樂工作室</p>
+          <p>營業登記地址：屏東縣恆春鎮環城北路242號</p>
+          <p>統編：94298454</p>
+        </div>
         <a href={lineUrl} target="_blank" rel="noreferrer">
           加入官方 LINE
         </a>
