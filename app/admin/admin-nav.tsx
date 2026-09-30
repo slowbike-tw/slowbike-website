@@ -1,3 +1,7 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+
 const adminLinks = [
   { href: "/admin", label: "儀表板" },
   { href: "/admin/products", label: "商品管理" },
@@ -8,10 +12,11 @@ const adminLinks = [
 ];
 
 export function AdminNav() {
+  const pathname = usePathname();
   return (
     <nav className="admin-nav" aria-label="後台導覽">
       {adminLinks.map((link) => (
-        <a href={link.href} key={link.href}>
+        <a href={link.href} key={link.href} aria-current={pathname === link.href ? "page" : undefined}>
           {link.label}
         </a>
       ))}

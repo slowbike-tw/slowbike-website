@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./design-refresh.css";
 
 export const metadata: Metadata = {
   title: "SlowBike 電動腳踏車專賣店",

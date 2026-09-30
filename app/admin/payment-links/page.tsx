@@ -72,7 +72,7 @@ export default async function AdminPaymentLinksPage() {
                 <article className="admin-list-item" key={link.token}>
                   <strong>{link.title}</strong>
                   <span>{link.model}｜{link.color || "未填顏色"}｜{formatPrice(link.amount)}</span>
-                  <input readOnly value={url} onFocus={(event) => event.currentTarget.select()} />
+                  <input aria-label={`${link.title} 付款網址`} readOnly value={url} />
                   <a className="admin-link-button" href={`/pay/${link.token}`} target="_blank">
                     開啟付款頁
                   </a>

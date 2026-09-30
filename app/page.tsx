@@ -24,10 +24,10 @@ export default async function Home() {
 
       <section className="hero-section">
         <div className="hero-copy">
-          <p className="eyebrow">SlowBike Electric Bicycle</p>
-          <h1>選一台真正適合你的電動車。</h1>
+          <p className="eyebrow">MOVE FREELY. LIVE SLOWLY.</p>
+          <h1>即刻出發，<em>慢享生活。</em></h1>
           <p className="lead">
-            我們把車款、付款與售後安排說清楚，讓你先看用途，再看規格，找到適合自己的電動腳踏車。
+            從城市通勤到週末遠行，找到真正適合你的電動腳踏車。說走就走，及時行樂。
           </p>
           <div className="hero-actions">
             <a className="line-button" href={lineUrl} target="_blank" rel="noreferrer">
@@ -46,6 +46,7 @@ export default async function Home() {
         {heroProduct ? (
           <a className="hero-media" href={`/products/${heroProduct.slug}`}>
             <img src={heroProduct.imagePath} alt={`SlowBike ${heroProduct.name}`} />
+            <span className="hero-caption"><span>{heroProduct.name} COLLECTION</span><span>EXPLORE THE RIDE ↗</span></span>
           </a>
         ) : null}
       </section>
@@ -53,8 +54,8 @@ export default async function Home() {
       <section id="products" className="section">
         <div className="section-heading left">
           <p className="eyebrow">Lineup</p>
-          <h2>主力車款</h2>
-          <p>點擊車款圖片或標題，可以進入各車款銷售頁。</p>
+          <h2>每一種日常，都有一台好車。</h2>
+          <p>依照生活選車，讓移動成為一天中喜歡的片刻。</p>
         </div>
         <div className="product-grid">
           {products.map((product) => (
