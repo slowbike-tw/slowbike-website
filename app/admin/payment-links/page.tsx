@@ -50,7 +50,7 @@ export default async function AdminPaymentLinksPage() {
           <label>
             付款方式
             <select name="paymentMode" defaultValue="once">
-              <option value="once">信用卡一次付清（藍新頁面可選期數）</option>
+              <option value="once">信用卡（一次付清／3／6／12 期，於藍新頁面選擇）</option>
             </select>
           </label>
           <label>

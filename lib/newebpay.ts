@@ -86,6 +86,7 @@ export function buildMpgPayload(input: {
     Email: input.email || "support@slowbike.com.tw",
     LoginType: 0,
     CREDIT: 1,
+    InstFlag: "3,6,12",
     ReturnURL: `${config.siteUrl}/api/newebpay/return`,
     NotifyURL: `${config.siteUrl}/api/newebpay/notify`,
     ClientBackURL: `${config.siteUrl}/payment/result/${input.merchantOrderNo}`,
